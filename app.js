@@ -37,7 +37,7 @@ const state = {
   rawCandlesByCode: new Map(),
   selectedCode: null,
   loadingCodes: new Set(),
-  chartView: { visibleCount: 36, priceScale: 1, hoverZone: "", barOffset: 0, priceOffset: 0 },
+  chartView: { visibleCount: 36, priceScale: 1, hoverZone: "", barOffset: 0, panX: 0, panY: 0 },
   chartLayout: null,
   timeframe: "4h",
   dragState: null,
@@ -320,10 +320,13 @@ function renderChart(stock) {
   const rawMaxPrice = Math.max(...visible.map((c) => c.high), ...visibleSt.filter((v) => v != null));
   const rawMidBase = (rawMinPrice + rawMaxPrice) / 2;
   const rawHalfRange = Math.max((rawMaxPrice - rawMinPrice) / 2, rawMidBase * 0.01);
-  const rawMidPrice = rawMidBase + state.chartView.priceOffset * rawHalfRange;
   const scaledHalfRange = rawHalfRange * state.chartView.priceScale;
-  const minPrice = rawMidPrice - scaledHalfRange;
-  const maxPrice = rawMidPrice + scaledHalfRange;
+  const baseMinPrice = rawMidBase - scaledHalfRange;
+  const baseMaxPrice = rawMidBase + scaledHalfRange;
+  const visiblePriceRange = baseMaxPrice - baseMinPrice || 1;
+  const verticalPriceShift = (state.chartView.panY / priceArea.h) * visiblePriceRange;
+  const minPrice = baseMinPrice + verticalPriceShift;
+  const maxPrice = baseMaxPrice + verticalPriceShift;
   const mapPriceY = (price) => priceArea.y + ((maxPrice - price) / (maxPrice - minPrice || 1)) * priceArea.h;
   for (let i = 0; i <= 6; i += 1) {
     const y = priceArea.y + (priceArea.h / 6) * i;
@@ -338,42 +341,70 @@ function renderChart(stock) {
   ctx.strokeStyle = "rgba(255,255,255,0.12)";
   ctx.beginPath(); ctx.moveTo(priceScaleArea.x, priceArea.y); ctx.lineTo(priceScaleArea.x, priceArea.y + priceArea.h); ctx.stroke();
   const candleWidth = priceArea.w / visible.length;
+  const panX = state.chartView.panX;
+  const labelCallouts = [];
   ctx.save();
   ctx.beginPath();
   ctx.rect(priceArea.x, priceArea.y, priceArea.w, priceArea.h);
   ctx.clip();
 
   visible.forEach((candle, i) => {
-    const x = priceArea.x + i * candleWidth + candleWidth / 2;
+    const x = priceArea.x + i * candleWidth + candleWidth / 2 + panX;
     const openY = mapPriceY(candle.open); const closeY = mapPriceY(candle.close); const highY = mapPriceY(candle.high); const lowY = mapPriceY(candle.low);
     const color = candle.close >= candle.open ? "#12c48b" : "#ff5263";
     ctx.strokeStyle = color; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(x, highY); ctx.lineTo(x, lowY); ctx.stroke();
     ctx.fillStyle = color; ctx.fillRect(x - candleWidth * 0.3, Math.min(openY, closeY), candleWidth * 0.6, Math.max(2, Math.abs(closeY - openY)));
     const st = visibleSt[i];
     if (st != null && i > 0 && visibleSt[i - 1] != null) {
-      const prevX = priceArea.x + (i - 1) * candleWidth + candleWidth / 2;
+      const prevX = priceArea.x + (i - 1) * candleWidth + candleWidth / 2 + panX;
       ctx.strokeStyle = computed.trend[offset + i] === -1 ? "#00e08a" : "#ff5e67";
       ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(prevX, mapPriceY(visibleSt[i - 1])); ctx.lineTo(x, mapPriceY(st)); ctx.stroke();
     }
   });
   [...computed.buySignals, ...computed.sellSignals].filter((signal) => signal.index >= offset && signal.index < endIndex).forEach((signal) => {
     const localIndex = signal.index - offset;
-    const x = priceArea.x + localIndex * candleWidth + candleWidth / 2;
+    const x = priceArea.x + localIndex * candleWidth + candleWidth / 2 + panX;
     const y = mapPriceY(signal.price);
     const isBuy = !Object.prototype.hasOwnProperty.call(signal, "pnl");
     const bg = isBuy ? "#ffe44c" : signal.pnl >= 0 ? "#ff9811" : "#ff5252";
     const fg = isBuy ? "#111317" : "#ffffff";
     const label = isBuy ? `買點\n${signal.reason}\n價:${round(signal.price, 2)}` : `賣點 (${signal.reason})\n價:${round(signal.price, 2)}\n獲利:${round(signal.pnl, 2)}%`;
     const lines = label.split("\n");
-    const boxW = 118;
+    const boxW = 124;
     const boxH = 24 + lines.length * 16;
-    const rawBoxY = isBuy ? y + 42 : y - boxH - 42;
-    const boxY = clamp(rawBoxY, priceArea.y + 10, priceArea.y + priceArea.h - boxH - 10);
+    const desiredBoxY = isBuy ? y + 72 : y - boxH - 72;
+    const boxY = clamp(desiredBoxY, priceArea.y + 12, priceArea.y + priceArea.h - boxH - 12);
     const boxX = clamp(x - boxW / 2, priceArea.x + 8, priceArea.x + priceArea.w - boxW - 8);
-    drawRoundRect(boxX, boxY, boxW, boxH, 8, bg, null);
-    lines.forEach((line, idx) => drawText(line, boxX + boxW / 2, boxY + 18 + idx * 16, fg, 12, "center"));
+    labelCallouts.push({ boxX, boxY, boxW, boxH, lines, fg, bg, targetX: x, targetY: y, isBuy });
   });
   ctx.restore();
+
+  labelCallouts.forEach((callout) => {
+    const anchorX = clamp(callout.targetX, callout.boxX + 18, callout.boxX + callout.boxW - 18);
+    const startY = callout.isBuy ? callout.boxY : callout.boxY + callout.boxH;
+    const endY = callout.isBuy ? callout.targetY + 14 : callout.targetY - 14;
+    ctx.strokeStyle = callout.bg;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(anchorX, startY);
+    ctx.lineTo(anchorX, endY);
+    ctx.stroke();
+    ctx.fillStyle = callout.bg;
+    ctx.beginPath();
+    if (callout.isBuy) {
+      ctx.moveTo(anchorX, callout.targetY + 4);
+      ctx.lineTo(anchorX - 6, callout.targetY + 16);
+      ctx.lineTo(anchorX + 6, callout.targetY + 16);
+    } else {
+      ctx.moveTo(anchorX, callout.targetY - 4);
+      ctx.lineTo(anchorX - 6, callout.targetY - 16);
+      ctx.lineTo(anchorX + 6, callout.targetY - 16);
+    }
+    ctx.closePath();
+    ctx.fill();
+    drawRoundRect(callout.boxX, callout.boxY, callout.boxW, callout.boxH, 8, callout.bg, null);
+    callout.lines.forEach((line, idx) => drawText(line, callout.boxX + callout.boxW / 2, callout.boxY + 18 + idx * 16, callout.fg, 12, "center"));
+  });
 
   const cciMin = Math.min(-100, ...visibleCci.filter((v) => v != null), ...visibleCciMa.filter((v) => v != null));
   const cciMax = Math.max(100, ...visibleCci.filter((v) => v != null), ...visibleCciMa.filter((v) => v != null));
@@ -396,8 +427,8 @@ function renderChart(stock) {
     series.forEach((value, i) => {
       if (value == null) return;
       if (i > 0 && series[i - 1] != null) {
-        const prevX = cciArea.x + (i - 1) * candleWidth + candleWidth / 2;
-        const x = cciArea.x + i * candleWidth + candleWidth / 2;
+        const prevX = cciArea.x + (i - 1) * candleWidth + candleWidth / 2 + panX;
+        const x = cciArea.x + i * candleWidth + candleWidth / 2 + panX;
         ctx.strokeStyle = idx === 0 ? "#2d73ff" : "#f7c843";
         ctx.lineWidth = idx === 0 ? 2.5 : 2;
         ctx.beginPath();
@@ -420,7 +451,7 @@ function renderChart(stock) {
   ctx.beginPath(); ctx.moveTo(macdArea.x, macdZeroY); ctx.lineTo(macdArea.x + macdArea.w, macdZeroY); ctx.stroke();
   visibleMacdHist.forEach((value, i) => {
     if (value == null) return;
-    const x = macdArea.x + i * candleWidth + candleWidth / 2;
+    const x = macdArea.x + i * candleWidth + candleWidth / 2 + panX;
     const y = mapMacdY(value);
     ctx.fillStyle = value >= 0 ? "rgba(21,209,141,0.65)" : "rgba(255,82,99,0.65)";
     ctx.fillRect(x - candleWidth * 0.32, Math.min(y, macdZeroY), candleWidth * 0.64, Math.abs(macdZeroY - y));
@@ -429,8 +460,8 @@ function renderChart(stock) {
     series.forEach((value, i) => {
       if (value == null) return;
       if (i > 0 && series[i - 1] != null) {
-        const prevX = macdArea.x + (i - 1) * candleWidth + candleWidth / 2;
-        const x = macdArea.x + i * candleWidth + candleWidth / 2;
+        const prevX = macdArea.x + (i - 1) * candleWidth + candleWidth / 2 + panX;
+        const x = macdArea.x + i * candleWidth + candleWidth / 2 + panX;
         ctx.strokeStyle = idx === 0 ? "#2d73ff" : "#ff9f1a";
         ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(prevX, mapMacdY(series[i - 1])); ctx.lineTo(x, mapMacdY(value)); ctx.stroke();
       }
@@ -453,8 +484,8 @@ function renderChart(stock) {
     series.forEach((value, i) => {
       if (value == null) return;
       if (i > 0 && series[i - 1] != null) {
-        const prevX = kdjArea.x + (i - 1) * candleWidth + candleWidth / 2;
-        const x = kdjArea.x + i * candleWidth + candleWidth / 2;
+        const prevX = kdjArea.x + (i - 1) * candleWidth + candleWidth / 2 + panX;
+        const x = kdjArea.x + i * candleWidth + candleWidth / 2 + panX;
         ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(prevX, mapKdjY(series[i - 1])); ctx.lineTo(x, mapKdjY(value)); ctx.stroke();
       }
     });
@@ -498,7 +529,7 @@ function renderWatchlist() {
     item.className = `watch-item ${stock.code === state.selectedCode ? "active" : ""}`;
     item.innerHTML = `<span class="watch-code">${stock.code}</span><span class="watch-name">${stock.name}</span>`;
     item.addEventListener("click", async () => {
-      state.selectedCode = stock.code; state.chartView.priceScale = 1; state.chartView.visibleCount = 36; state.chartView.barOffset = 0; state.chartView.priceOffset = 0; renderAll();
+      state.selectedCode = stock.code; state.chartView.priceScale = 1; state.chartView.visibleCount = 36; state.chartView.barOffset = 0; state.chartView.panX = 0; state.chartView.panY = 0; renderAll();
       if (!state.rawCandlesByCode.has(stock.code)) await ensureStockData(stock.code, stock.name);
     });
     watchlistEl.appendChild(item);
@@ -683,13 +714,22 @@ canvas.addEventListener("pointermove", (event) => {
     event.preventDefault();
     const dx = point.x - state.dragState.startX;
     const dy = point.y - state.dragState.startY;
-    const barShift = Math.round(dx / Math.max(3, state.dragState.candleWidth * 0.45));
-    state.chartView.barOffset = clamp(state.dragState.startBarOffset - barShift, 0, state.dragState.maxBarOffset);
-    state.chartView.priceOffset = clamp(
-      state.dragState.startPriceOffset + dy / Math.max(1, state.dragState.priceAreaHeight * 0.32),
-      -3,
-      3,
-    );
+    const step = Math.max(6, state.dragState.candleWidth);
+    let nextBarOffset = state.dragState.startBarOffset;
+    let nextPanX = state.dragState.startPanX + dx;
+    while (nextPanX >= step && nextBarOffset < state.dragState.maxBarOffset) {
+      nextBarOffset += 1;
+      nextPanX -= step;
+    }
+    while (nextPanX <= -step && nextBarOffset > 0) {
+      nextBarOffset -= 1;
+      nextPanX += step;
+    }
+    if (nextBarOffset === 0) nextPanX = Math.max(nextPanX, -step * 0.35);
+    if (nextBarOffset === state.dragState.maxBarOffset) nextPanX = Math.min(nextPanX, step * 0.35);
+    state.chartView.barOffset = clamp(nextBarOffset, 0, state.dragState.maxBarOffset);
+    state.chartView.panX = clamp(nextPanX, -step * 0.95, step * 0.95);
+    state.chartView.panY = clamp(state.dragState.startPanY + dy, -state.dragState.priceAreaHeight * 2.2, state.dragState.priceAreaHeight * 2.2);
     canvas.style.cursor = "grabbing";
     renderAll();
     return;
@@ -713,7 +753,8 @@ canvas.addEventListener("pointerdown", (event) => {
     startX: point.x,
     startY: point.y,
     startBarOffset: state.chartView.barOffset,
-    startPriceOffset: state.chartView.priceOffset,
+    startPanX: state.chartView.panX,
+    startPanY: state.chartView.panY,
     candleWidth: state.chartLayout.priceArea.w / visibleCount,
     maxBarOffset: Math.max(0, candles.length - visibleCount),
     priceAreaHeight: state.chartLayout.priceArea.h,
@@ -732,7 +773,7 @@ const clearDragState = (event) => {
 };
 canvas.addEventListener("pointerup", clearDragState);
 canvas.addEventListener("pointercancel", clearDragState);
-timeframeSelect.addEventListener("change", () => { state.timeframe = timeframeSelect.value; state.chartView.visibleCount = 36; state.chartView.priceScale = 1; state.chartView.barOffset = 0; state.chartView.priceOffset = 0; renderAll(); });
+timeframeSelect.addEventListener("change", () => { state.timeframe = timeframeSelect.value; state.chartView.visibleCount = 36; state.chartView.priceScale = 1; state.chartView.barOffset = 0; state.chartView.panX = 0; state.chartView.panY = 0; renderAll(); });
 stockForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   const code = codeInput.value.trim();
