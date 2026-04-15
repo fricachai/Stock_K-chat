@@ -146,25 +146,30 @@ function computeIndicator(candles) {
   const buySignals = [];
   const sellSignals = [];
   let lastBuyPrice = null;
+  let positionState = null;
   for (let i = 0; i < candles.length; i += 1) {
     const candle = candles[i];
     if (cciVal[i] == null || cciMa[i] == null) continue;
     const prevCci = cciVal[i - 1];
     const prevCciMa = cciMa[i - 1];
     const condCciBuy = crossover(cciVal[i], cciMa[i], prevCci, prevCciMa);
-    const isHoldingInitial = lastBuyPrice != null;
-    const triggerNewBuy = condCciBuy && !isHoldingInitial;
     const condCciSell = crossunder(cciVal[i], cciMa[i], prevCci, prevCciMa);
-    const triggerSellHold = condCciSell && isHoldingInitial;
+    const canBuy = positionState !== "long";
+    const canSell = positionState !== "flat";
+    const triggerNewBuy = condCciBuy && canBuy;
+    const triggerSellHold = condCciSell && canSell;
     if (triggerSellHold) {
       const execSell = candle.close;
-      sellSignals.push({ index: i, price: execSell, pnl: ((execSell - lastBuyPrice) / lastBuyPrice) * 100, reason: "死亡交叉" });
+      const pnl = lastBuyPrice == null ? null : ((execSell - lastBuyPrice) / lastBuyPrice) * 100;
+      sellSignals.push({ index: i, price: execSell, pnl, reason: "死亡交叉" });
       lastBuyPrice = null;
+      positionState = "flat";
     }
     if (triggerNewBuy) {
       const execBuy = candle.close;
       buySignals.push({ index: i, price: execBuy, reason: "黃金交叉" });
       lastBuyPrice = execBuy;
+      positionState = "long";
     }
   }
   return { stValue, trend, cciVal, cciMa, cciAtr: Array(candles.length).fill(null), buySignals, sellSignals };
@@ -336,7 +341,8 @@ function renderChart(stock) {
     const isBuy = !Object.prototype.hasOwnProperty.call(signal, "pnl");
     const bg = isBuy ? "#ffe44c" : signal.pnl >= 0 ? "#ff9811" : "#ff5252";
     const fg = isBuy ? "#111317" : "#ffffff";
-    const label = isBuy ? `買點\n${signal.reason}\n價:${round(signal.price, 2)}` : `賣點 (${signal.reason})\n價:${round(signal.price, 2)}\n獲利:${round(signal.pnl, 2)}%`;
+    const pnlText = signal.pnl == null ? "-" : `${round(signal.pnl, 2)}%`;
+    const label = isBuy ? `買點\n${signal.reason}\n價:${round(signal.price, 2)}` : `賣點 (${signal.reason})\n價:${round(signal.price, 2)}\n獲利:${pnlText}`;
     const lines = label.split("\n");
     const boxW = 124;
     const boxH = 24 + lines.length * 16;
