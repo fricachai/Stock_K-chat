@@ -30,7 +30,7 @@ const state = {
   loadingCodes: new Set(),
   chartView: { visibleCount: 36, priceScale: 1, hoverZone: "", barOffset: 0, panX: 0, panY: 0 },
   chartLayout: null,
-  timeframe: "4h",
+  timeframe: "1d",
   dragState: null,
 };
 
@@ -634,9 +634,11 @@ function generateDemoCandles(code, name, seed, startPrice) {
   const rand = seededRandom(seed);
   const candles = [];
   let price = startPrice;
+  const endDate = new Date();
+  endDate.setMinutes(0, 0, 0);
   for (let i = 0; i < 160; i += 1) {
-    const date = new Date("2026-01-01T09:00:00");
-    date.setHours(date.getHours() + i);
+    const date = new Date(endDate);
+    date.setHours(endDate.getHours() - (159 - i));
     const drift = Math.sin(i / 7) * 1.4 + (rand() - 0.5) * 4.2;
     const open = price; const close = Math.max(10, open + drift);
     const high = Math.max(open, close) + rand() * 2.2; const low = Math.min(open, close) - rand() * 2.2;
@@ -649,13 +651,15 @@ function generateDemoCandles(code, name, seed, startPrice) {
 function loadDemoData() {
   state.stocks = [];
   state.rawCandlesByCode.clear();
+  state.timeframe = "1d";
+  timeframeSelect.value = "1d";
   generateDemoCandles("2330", "台積電", 101, 912);
   generateDemoCandles("1319", "東陽", 207, 96);
   generateDemoCandles("2313", "華通", 509, 225);
   generateDemoCandles("2603", "長榮", 803, 228);
   state.selectedCode = "2330";
   renderAll();
-  setStatus("已載入 1 小時示範資料，預設以 4 小時聚合顯示。", "success");
+  setStatus("已載入 1 小時示範資料，預設以 1 日聚合顯示。", "success");
 }
 function getCanvasPoint(event) {
   const rect = canvas.getBoundingClientRect();
