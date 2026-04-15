@@ -10,7 +10,6 @@ const searchInput = document.getElementById("searchInput");
 const statusText = document.getElementById("statusText");
 const watchlistFileInput = document.getElementById("watchlistFileInput");
 const priceFileInput = document.getElementById("priceFileInput");
-const loadDemoBtn = document.getElementById("loadDemoBtn");
 const timeframeSelect = document.getElementById("timeframeSelect");
 
 const settings = {
@@ -28,7 +27,7 @@ const state = {
   rawCandlesByCode: new Map(),
   selectedCode: null,
   loadingCodes: new Set(),
-  chartView: { visibleCount: 36, priceScale: 1, hoverZone: "", barOffset: 0, panX: 0, panY: 0 },
+  chartView: { visibleCount: 36, priceScale: 1, hoverZone: "", hoverX: null, barOffset: 0, panX: 0, panY: 0 },
   chartLayout: null,
   timeframe: "1d",
   dragState: null,
@@ -467,6 +466,17 @@ function renderChart(stock) {
   drawText("CCI", cciArea.x, cciArea.y - 12, "#97a0af", 14);
   drawText("MACD", macdArea.x, macdArea.y - 12, "#97a0af", 14);
   drawText("KDJ", kdjArea.x, kdjArea.y - 12, "#97a0af", 14);
+  if (state.chartView.hoverX != null) {
+    const lineLeft = priceArea.x;
+    const lineRight = xAxisArea.x + xAxisArea.w;
+    const lineX = clamp(state.chartView.hoverX, lineLeft, lineRight);
+    ctx.strokeStyle = "rgba(255,255,255,0.9)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(lineX, priceArea.y);
+    ctx.lineTo(lineX, kdjArea.y + kdjArea.h);
+    ctx.stroke();
+  }
   drawRoundRect(infoArea.x, infoArea.y, infoArea.w, infoArea.h, 14, "rgba(19,22,30,0.95)", "#2a3040");
   const rows = [
     ["CCI 狀態", isUnderMa ? "藍在下" : "藍在上", isUnderMa ? "#ff5263" : "#15d18d", isUnderMa ? "#ffffff" : "#111317"],
@@ -674,6 +684,22 @@ function detectChartZone(point) {
   if (inBox(layout.priceScaleArea)) return "priceScale";
   return "";
 }
+function updateHoverCrosshair(point) {
+  const layout = state.chartLayout;
+  if (!layout) {
+    state.chartView.hoverX = null;
+    return;
+  }
+  const left = layout.priceArea.x;
+  const right = layout.xAxisArea.x + layout.xAxisArea.w;
+  const top = layout.priceArea.y;
+  const bottom = layout.kdjArea.y + layout.kdjArea.h;
+  if (point.x >= left && point.x <= right && point.y >= top && point.y <= bottom) {
+    state.chartView.hoverX = point.x;
+  } else {
+    state.chartView.hoverX = null;
+  }
+}
 canvas.addEventListener("wheel", (event) => {
   const zone = detectChartZone(getCanvasPoint(event));
   if (!zone) return;
@@ -687,6 +713,7 @@ canvas.addEventListener("pointermove", (event) => {
   const point = getCanvasPoint(event);
   if (state.dragState) {
     event.preventDefault();
+    updateHoverCrosshair(point);
     const dx = point.x - state.dragState.startX;
     const dy = point.y - state.dragState.startY;
     const step = Math.max(6, state.dragState.candleWidth);
@@ -711,10 +738,11 @@ canvas.addEventListener("pointermove", (event) => {
   }
   const zone = detectChartZone(point);
   state.chartView.hoverZone = zone;
+  updateHoverCrosshair(point);
   canvas.style.cursor = zone === "xAxis" ? "ew-resize" : zone === "priceScale" ? "ns-resize" : zone === "priceArea" ? "grab" : "default";
   renderAll();
 });
-canvas.addEventListener("pointerleave", () => { if (!state.dragState) { state.chartView.hoverZone = ""; canvas.style.cursor = "default"; renderAll(); } });
+canvas.addEventListener("pointerleave", () => { if (!state.dragState) { state.chartView.hoverZone = ""; state.chartView.hoverX = null; canvas.style.cursor = "default"; renderAll(); } });
 canvas.addEventListener("pointerdown", (event) => {
   if (event.button !== 0) return;
   const point = getCanvasPoint(event);
@@ -765,7 +793,6 @@ priceFileInput.addEventListener("change", (event) => {
   const file = event.target.files?.[0]; if (!file) return;
   readFile(file, (text) => { loadPriceRows(parseCsv(text)); setStatus("已匯入本地 K 線 CSV。", "success"); }); event.target.value = "";
 });
-loadDemoBtn.addEventListener("click", loadDemoData);
 window.addEventListener("resize", () => renderAll());
 async function bootstrap() {
   const ok = await ensureStockData("2330", "");
