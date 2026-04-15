@@ -380,7 +380,7 @@ function renderChart(stock) {
   visible.forEach((candle, i) => {
     const x = priceArea.x + i * candleWidth + candleWidth / 2 + panX;
     const openY = mapPriceY(candle.open); const closeY = mapPriceY(candle.close); const highY = mapPriceY(candle.high); const lowY = mapPriceY(candle.low);
-    const color = candle.close >= candle.open ? "#ff5263" : "#12c48b";
+    const color = candle.close >= candle.open ? "#ff3b30" : "#00c853";
     ctx.strokeStyle = color; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(x, highY); ctx.lineTo(x, lowY); ctx.stroke();
     ctx.fillStyle = color; ctx.fillRect(x - candleWidth * 0.3, Math.min(openY, closeY), candleWidth * 0.6, Math.max(2, Math.abs(closeY - openY)));
     const st = visibleSt[i];
@@ -482,7 +482,7 @@ function renderChart(stock) {
     if (value == null) return;
     const x = macdArea.x + i * candleWidth + candleWidth / 2 + panX;
     const y = mapMacdY(value);
-    ctx.fillStyle = value >= 0 ? "rgba(255,82,99,0.72)" : "rgba(21,209,141,0.72)";
+    ctx.fillStyle = value >= 0 ? "rgba(255,59,48,0.82)" : "rgba(0,200,83,0.82)";
     ctx.fillRect(x - candleWidth * 0.32, Math.min(y, macdZeroY), candleWidth * 0.64, Math.abs(macdZeroY - y));
   });
   [visibleMacdDif, visibleMacdDea].forEach((series, idx) => {
