@@ -118,6 +118,11 @@ h3 {
   background: #ffffff;
 }
 
+.ghost-select option:checked {
+  color: #ffffff;
+  background: #2969ff;
+}
+
 .file-button {
   position: relative;
   overflow: hidden;

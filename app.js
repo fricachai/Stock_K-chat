@@ -286,9 +286,9 @@ function renderChart(stock) {
   const priceArea = { x: 42, y: 72, w: 890, h: 360 };
   const xAxisArea = { x: 42, y: 432, w: 890, h: 40 };
   const priceScaleArea = { x: 932, y: 72, w: 78, h: 360 };
-  const cciArea = { x: 42, y: 495, w: 968, h: 90 };
-  const macdArea = { x: 42, y: 610, w: 968, h: 100 };
-  const kdjArea = { x: 42, y: 730, w: 968, h: 90 };
+  const cciArea = { x: 42, y: 535, w: 968, h: 95 };
+  const macdArea = { x: 42, y: 650, w: 968, h: 110 };
+  const kdjArea = { x: 42, y: 785, w: 968, h: 100 };
   const infoArea = { x: 1040, y: 90, w: 250, h: 270 };
   state.chartLayout = { priceArea, xAxisArea, priceScaleArea };
   drawRoundRect(xAxisArea.x, xAxisArea.y, xAxisArea.w, xAxisArea.h, 8, state.chartView.hoverZone === "xAxis" ? "rgba(247,200,67,0.08)" : "rgba(255,255,255,0.03)", state.chartView.hoverZone === "xAxis" ? "rgba(247,200,67,0.4)" : null);
@@ -361,7 +361,7 @@ function renderChart(stock) {
     const bg = isBuy ? "#ffe44c" : signal.pnl >= 0 ? "#ff9811" : "#ff5252";
     const fg = isBuy ? "#111317" : "#ffffff";
     const label = isBuy ? `買點\n${signal.reason}\n價:${round(signal.price, 2)}` : `賣點 (${signal.reason})\n價:${round(signal.price, 2)}\n獲利:${round(signal.pnl, 2)}%`;
-    const lines = label.split("\n"); const boxH = 22 + lines.length * 16; const boxY = isBuy ? y + 12 : y - boxH - 12;
+    const lines = label.split("\n"); const boxH = 22 + lines.length * 16; const boxY = isBuy ? y + 30 : y - boxH - 30;
     drawRoundRect(x - 54, boxY, 108, boxH, 8, bg, null); lines.forEach((line, idx) => drawText(line, x, boxY + 18 + idx * 16, fg, 12, "center"));
   });
   const macdMin = Math.min(-1, ...visibleMacdHist.filter((v) => v != null), ...visibleMacdDif.filter((v) => v != null), ...visibleMacdDea.filter((v) => v != null));
