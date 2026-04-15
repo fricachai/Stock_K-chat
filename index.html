@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CCI 雙向轉折 觀察面板</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <main class="chart-panel">
+      <header class="chart-header">
+        <div>
+          <p class="eyebrow">CCI 雙向轉折 (終極潔淨版)</p>
+          <h1 id="chartTitle">載入中...</h1>
+        </div>
+        <div class="header-actions">
+          <button class="ghost-button" id="loadDemoBtn">載入示範資料</button>
+          <label class="ghost-button file-button">
+            匯入 K 線 CSV
+            <input id="priceFileInput" type="file" accept=".csv" hidden />
+          </label>
+        </div>
+      </header>
+
+      <section class="chart-stage">
+        <canvas id="chartCanvas" width="1320" height="860"></canvas>
+        <div class="chart-help">
+          <span>CSV 欄位格式：`code,name,date,open,high,low,close,volume`</span>
+        </div>
+      </section>
+    </main>
+
+    <aside class="watchlist-panel">
+      <div class="watchlist-top">
+        <div>
+          <p class="eyebrow">右側觀察清單</p>
+          <h2>股票代號 / 名稱</h2>
+        </div>
+        <label class="icon-button file-button">
+          匯入
+          <input id="watchlistFileInput" type="file" accept=".csv" hidden />
+        </label>
+      </div>
+
+      <form id="stockForm" class="stock-form">
+        <input id="codeInput" type="text" maxlength="12" placeholder="股票代號，例如 2330" />
+        <input id="nameInput" type="text" maxlength="30" placeholder="股票名稱可留空，自動抓取" />
+        <button type="submit">加入 / 抓取</button>
+      </form>
+
+      <p id="statusText" class="status-text">輸入股票代號後，系統會自動向 TWSE 官方資料抓取名稱與日 K。</p>
+
+      <div class="watchlist-toolbar">
+        <input id="searchInput" type="search" placeholder="搜尋代號或名稱" />
+      </div>
+
+      <div class="watchlist-header">
+        <span>商品</span>
+        <span>名稱</span>
+      </div>
+      <div id="watchlist" class="watchlist"></div>
+
+      <section class="import-note">
+        <h3>匯入說明</h3>
+        <p>觀察清單 CSV：`code` 或 `code,name` 都可以</p>
+        <p>K 線 CSV：`code,name,date,open,high,low,close,volume`</p>
+        <p>同一支股票可重複匯入，系統會自動刷新圖表資料。</p>
+      </section>
+    </aside>
+  </div>
+
+  <script src="./app.js"></script>
+</body>
+</html>
