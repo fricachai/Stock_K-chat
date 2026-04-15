@@ -380,7 +380,7 @@ function renderChart(stock) {
   visible.forEach((candle, i) => {
     const x = priceArea.x + i * candleWidth + candleWidth / 2 + panX;
     const openY = mapPriceY(candle.open); const closeY = mapPriceY(candle.close); const highY = mapPriceY(candle.high); const lowY = mapPriceY(candle.low);
-    const color = candle.close >= candle.open ? "#12c48b" : "#ff5263";
+    const color = candle.close >= candle.open ? "#ff5263" : "#12c48b";
     ctx.strokeStyle = color; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(x, highY); ctx.lineTo(x, lowY); ctx.stroke();
     ctx.fillStyle = color; ctx.fillRect(x - candleWidth * 0.3, Math.min(openY, closeY), candleWidth * 0.6, Math.max(2, Math.abs(closeY - openY)));
     const st = visibleSt[i];
