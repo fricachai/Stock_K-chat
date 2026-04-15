@@ -381,7 +381,7 @@ function renderChart(stock) {
     const lines = label.split("\n");
     const boxW = 124;
     const boxH = 24 + lines.length * 16;
-    const desiredBoxY = isBuy ? y + 72 : y - boxH - 72;
+    const desiredBoxY = isBuy ? y + 96 : y - boxH - 96;
     const boxY = desiredBoxY;
     const boxX = clamp(x - boxW / 2, priceArea.x + 8, priceArea.x + priceArea.w - boxW - 8);
     labelCallouts.push({ boxX, boxY, boxW, boxH, lines, fg, bg, targetX: x, targetY: y, isBuy });
@@ -389,7 +389,7 @@ function renderChart(stock) {
   labelCallouts.forEach((callout) => {
     const anchorX = clamp(callout.targetX, callout.boxX + 18, callout.boxX + callout.boxW - 18);
     const startY = callout.isBuy ? callout.boxY : callout.boxY + callout.boxH;
-    const endY = callout.isBuy ? callout.targetY + 14 : callout.targetY - 14;
+    const endY = callout.isBuy ? callout.targetY + 30 : callout.targetY - 30;
     ctx.strokeStyle = callout.bg;
     ctx.lineWidth = 2;
     ctx.beginPath();
@@ -399,13 +399,13 @@ function renderChart(stock) {
     ctx.fillStyle = callout.bg;
     ctx.beginPath();
     if (callout.isBuy) {
-      ctx.moveTo(anchorX, callout.targetY + 4);
-      ctx.lineTo(anchorX - 6, callout.targetY + 16);
-      ctx.lineTo(anchorX + 6, callout.targetY + 16);
+      ctx.moveTo(anchorX, callout.targetY + 18);
+      ctx.lineTo(anchorX - 6, callout.targetY + 30);
+      ctx.lineTo(anchorX + 6, callout.targetY + 30);
     } else {
-      ctx.moveTo(anchorX, callout.targetY - 4);
-      ctx.lineTo(anchorX - 6, callout.targetY - 16);
-      ctx.lineTo(anchorX + 6, callout.targetY - 16);
+      ctx.moveTo(anchorX, callout.targetY - 18);
+      ctx.lineTo(anchorX - 6, callout.targetY - 30);
+      ctx.lineTo(anchorX + 6, callout.targetY - 30);
     }
     ctx.closePath();
     ctx.fill();
