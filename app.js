@@ -482,7 +482,7 @@ function renderChart(stock) {
     if (value == null) return;
     const x = macdArea.x + i * candleWidth + candleWidth / 2 + panX;
     const y = mapMacdY(value);
-    ctx.fillStyle = value >= 0 ? "rgba(21,209,141,0.65)" : "rgba(255,82,99,0.65)";
+    ctx.fillStyle = value >= 0 ? "rgba(255,82,99,0.72)" : "rgba(21,209,141,0.72)";
     ctx.fillRect(x - candleWidth * 0.32, Math.min(y, macdZeroY), candleWidth * 0.64, Math.abs(macdZeroY - y));
   });
   [visibleMacdDif, visibleMacdDea].forEach((series, idx) => {
