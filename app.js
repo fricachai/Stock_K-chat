@@ -37,9 +37,10 @@ const state = {
   rawCandlesByCode: new Map(),
   selectedCode: null,
   loadingCodes: new Set(),
-  chartView: { visibleCount: 60, priceScale: 1, hoverZone: "" },
+  chartView: { visibleCount: 60, priceScale: 1, hoverZone: "", barOffset: 0, priceOffset: 0 },
   chartLayout: null,
   timeframe: "4h",
+  dragState: null,
 };
 
 function setStatus(message, type = "") {
@@ -282,11 +283,12 @@ function renderChart(stock) {
   const changeValue = lastCandle.close - prevClose;
   const changePct = prevClose === 0 ? 0 : ((lastCandle.close / prevClose) - 1) * 100;
   const distStr = settings.enable_early ? `< ${round((settings.use_dynamic ? lastCciAtr * settings.early_mult : settings.static_early), 1)} 點` : "已關閉提前預判";
-  const priceArea = { x: 42, y: 72, w: 890, h: 410 };
-  const xAxisArea = { x: 42, y: 482, w: 890, h: 40 };
-  const priceScaleArea = { x: 932, y: 72, w: 78, h: 410 };
-  const macdArea = { x: 42, y: 545, w: 968, h: 120 };
-  const kdjArea = { x: 42, y: 690, w: 968, h: 110 };
+  const priceArea = { x: 42, y: 72, w: 890, h: 360 };
+  const xAxisArea = { x: 42, y: 432, w: 890, h: 40 };
+  const priceScaleArea = { x: 932, y: 72, w: 78, h: 360 };
+  const cciArea = { x: 42, y: 495, w: 968, h: 90 };
+  const macdArea = { x: 42, y: 610, w: 968, h: 100 };
+  const kdjArea = { x: 42, y: 730, w: 968, h: 90 };
   const infoArea = { x: 1040, y: 90, w: 250, h: 270 };
   state.chartLayout = { priceArea, xAxisArea, priceScaleArea };
   drawRoundRect(xAxisArea.x, xAxisArea.y, xAxisArea.w, xAxisArea.h, 8, state.chartView.hoverZone === "xAxis" ? "rgba(247,200,67,0.08)" : "rgba(255,255,255,0.03)", state.chartView.hoverZone === "xAxis" ? "rgba(247,200,67,0.4)" : null);
@@ -296,19 +298,26 @@ function renderChart(stock) {
   drawText(`${round(changeValue, 2)} (${round(changePct, 2)}%)`, 460, 42, changeValue >= 0 ? "#15d18d" : "#ff5263", 18);
   const visibleCount = clamp(state.chartView.visibleCount, 20, Math.min(220, candles.length));
   state.chartView.visibleCount = visibleCount;
-  const visible = candles.slice(-visibleCount);
-  const offset = candles.length - visible.length;
-  const visibleSt = computed.stValue.slice(-visibleCount);
-  const visibleMacdHist = macd.hist.slice(-visibleCount);
-  const visibleMacdDif = macd.dif.slice(-visibleCount);
-  const visibleMacdDea = macd.dea.slice(-visibleCount);
-  const visibleK = kdj.k.slice(-visibleCount);
-  const visibleD = kdj.d.slice(-visibleCount);
-  const visibleJ = kdj.j.slice(-visibleCount);
+  const maxBarOffset = Math.max(0, candles.length - visibleCount);
+  state.chartView.barOffset = clamp(state.chartView.barOffset, 0, maxBarOffset);
+  const startIndex = Math.max(0, candles.length - visibleCount - state.chartView.barOffset);
+  const endIndex = startIndex + visibleCount;
+  const visible = candles.slice(startIndex, endIndex);
+  const offset = startIndex;
+  const visibleSt = computed.stValue.slice(startIndex, endIndex);
+  const visibleCci = computed.cciVal.slice(startIndex, endIndex);
+  const visibleCciMa = computed.cciMa.slice(startIndex, endIndex);
+  const visibleMacdHist = macd.hist.slice(startIndex, endIndex);
+  const visibleMacdDif = macd.dif.slice(startIndex, endIndex);
+  const visibleMacdDea = macd.dea.slice(startIndex, endIndex);
+  const visibleK = kdj.k.slice(startIndex, endIndex);
+  const visibleD = kdj.d.slice(startIndex, endIndex);
+  const visibleJ = kdj.j.slice(startIndex, endIndex);
   const rawMinPrice = Math.min(...visible.map((c) => c.low), ...visibleSt.filter((v) => v != null));
   const rawMaxPrice = Math.max(...visible.map((c) => c.high), ...visibleSt.filter((v) => v != null));
-  const rawMidPrice = (rawMinPrice + rawMaxPrice) / 2;
-  const rawHalfRange = Math.max((rawMaxPrice - rawMinPrice) / 2, rawMidPrice * 0.01);
+  const rawMidBase = (rawMinPrice + rawMaxPrice) / 2;
+  const rawHalfRange = Math.max((rawMaxPrice - rawMinPrice) / 2, rawMidBase * 0.01);
+  const rawMidPrice = rawMidBase + state.chartView.priceOffset * rawHalfRange;
   const scaledHalfRange = rawHalfRange * state.chartView.priceScale;
   const minPrice = rawMidPrice - scaledHalfRange;
   const maxPrice = rawMidPrice + scaledHalfRange;
@@ -326,6 +335,11 @@ function renderChart(stock) {
   ctx.strokeStyle = "rgba(255,255,255,0.12)";
   ctx.beginPath(); ctx.moveTo(priceScaleArea.x, priceArea.y); ctx.lineTo(priceScaleArea.x, priceArea.y + priceArea.h); ctx.stroke();
   const candleWidth = priceArea.w / visible.length;
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(priceArea.x, priceArea.y, priceArea.w, priceArea.h);
+  ctx.clip();
+
   visible.forEach((candle, i) => {
     const x = priceArea.x + i * candleWidth + candleWidth / 2;
     const openY = mapPriceY(candle.open); const closeY = mapPriceY(candle.close); const highY = mapPriceY(candle.high); const lowY = mapPriceY(candle.low);
@@ -339,7 +353,7 @@ function renderChart(stock) {
       ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(prevX, mapPriceY(visibleSt[i - 1])); ctx.lineTo(x, mapPriceY(st)); ctx.stroke();
     }
   });
-  [...computed.buySignals, ...computed.sellSignals].filter((signal) => signal.index >= offset).forEach((signal) => {
+  [...computed.buySignals, ...computed.sellSignals].filter((signal) => signal.index >= offset && signal.index < endIndex).forEach((signal) => {
     const localIndex = signal.index - offset;
     const x = priceArea.x + localIndex * candleWidth + candleWidth / 2;
     const y = mapPriceY(signal.price);
@@ -362,6 +376,36 @@ function renderChart(stock) {
     const y = mapMacdY(value);
     ctx.fillStyle = value >= 0 ? "rgba(21,209,141,0.65)" : "rgba(255,82,99,0.65)";
     ctx.fillRect(x - candleWidth * 0.32, Math.min(y, macdZeroY), candleWidth * 0.64, Math.abs(macdZeroY - y));
+  });
+  ctx.restore();
+
+  const cciMin = Math.min(-100, ...visibleCci.filter((v) => v != null), ...visibleCciMa.filter((v) => v != null));
+  const cciMax = Math.max(100, ...visibleCci.filter((v) => v != null), ...visibleCciMa.filter((v) => v != null));
+  const mapCciY = (v) => cciArea.y + ((cciMax - v) / (cciMax - cciMin || 1)) * cciArea.h;
+  [-100, 0, 100].forEach((level) => {
+    const y = mapCciY(level);
+    ctx.strokeStyle = "rgba(255,255,255,0.12)";
+    ctx.setLineDash([6, 6]);
+    ctx.beginPath();
+    ctx.moveTo(cciArea.x, y);
+    ctx.lineTo(cciArea.x + cciArea.w, y);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  });
+  [visibleCci, visibleCciMa].forEach((series, idx) => {
+    series.forEach((value, i) => {
+      if (value == null) return;
+      if (i > 0 && series[i - 1] != null) {
+        const prevX = cciArea.x + (i - 1) * candleWidth + candleWidth / 2;
+        const x = cciArea.x + i * candleWidth + candleWidth / 2;
+        ctx.strokeStyle = idx === 0 ? "#2d73ff" : "#f7c843";
+        ctx.lineWidth = idx === 0 ? 2.5 : 2;
+        ctx.beginPath();
+        ctx.moveTo(prevX, mapCciY(series[i - 1]));
+        ctx.lineTo(x, mapCciY(value));
+        ctx.stroke();
+      }
+    });
   });
   [visibleMacdDif, visibleMacdDea].forEach((series, idx) => {
     series.forEach((value, i) => {
@@ -392,6 +436,7 @@ function renderChart(stock) {
       }
     });
   });
+  drawText("CCI", cciArea.x, cciArea.y - 12, "#97a0af", 14);
   drawText("MACD", macdArea.x, macdArea.y - 12, "#97a0af", 14);
   drawText("KDJ", kdjArea.x, kdjArea.y - 12, "#97a0af", 14);
   drawRoundRect(infoArea.x, infoArea.y, infoArea.w, infoArea.h, 14, "rgba(19,22,30,0.95)", "#2a3040");
@@ -594,6 +639,7 @@ function detectChartZone(point) {
   const layout = state.chartLayout;
   if (!layout) return "";
   const inBox = (box) => point.x >= box.x && point.x <= box.x + box.w && point.y >= box.y && point.y <= box.y + box.h;
+  if (inBox(layout.priceArea)) return "priceArea";
   if (inBox(layout.xAxisArea)) return "xAxis";
   if (inBox(layout.priceScaleArea)) return "priceScale";
   return "";
@@ -608,12 +654,45 @@ canvas.addEventListener("wheel", (event) => {
   renderAll();
 }, { passive: false });
 canvas.addEventListener("mousemove", (event) => {
-  const zone = detectChartZone(getCanvasPoint(event));
+  const point = getCanvasPoint(event);
+  if (state.dragState) {
+    const dx = point.x - state.dragState.startX;
+    const dy = point.y - state.dragState.startY;
+    const barShift = Math.round(dx / Math.max(6, state.dragState.candleWidth));
+    state.chartView.barOffset = clamp(state.dragState.startBarOffset - barShift, 0, state.dragState.maxBarOffset);
+    state.chartView.priceOffset = clamp(
+      state.dragState.startPriceOffset + dy / Math.max(1, state.dragState.priceAreaHeight),
+      -3,
+      3,
+    );
+    canvas.style.cursor = "grabbing";
+    renderAll();
+    return;
+  }
+  const zone = detectChartZone(point);
   state.chartView.hoverZone = zone;
-  canvas.style.cursor = zone === "xAxis" ? "ew-resize" : zone === "priceScale" ? "ns-resize" : "default";
+  canvas.style.cursor = zone === "xAxis" ? "ew-resize" : zone === "priceScale" ? "ns-resize" : zone === "priceArea" ? "grab" : "default";
   renderAll();
 });
 canvas.addEventListener("mouseleave", () => { state.chartView.hoverZone = ""; canvas.style.cursor = "default"; renderAll(); });
+canvas.addEventListener("mousedown", (event) => {
+  const point = getCanvasPoint(event);
+  const zone = detectChartZone(point);
+  if (zone !== "priceArea" || !state.chartLayout) return;
+  const { candles } = getDisplayCandles(state.selectedCode);
+  const visibleCount = clamp(state.chartView.visibleCount, 20, Math.min(220, candles.length));
+  state.dragState = {
+    startX: point.x,
+    startY: point.y,
+    startBarOffset: state.chartView.barOffset,
+    startPriceOffset: state.chartView.priceOffset,
+    candleWidth: state.chartLayout.priceArea.w / visibleCount,
+    maxBarOffset: Math.max(0, candles.length - visibleCount),
+    priceAreaHeight: state.chartLayout.priceArea.h,
+  };
+  canvas.style.cursor = "grabbing";
+});
+window.addEventListener("mouseup", () => { state.dragState = null; });
 timeframeSelect.addEventListener("change", () => { state.timeframe = timeframeSelect.value; state.chartView.visibleCount = 60; state.chartView.priceScale = 1; renderAll(); });
 stockForm.addEventListener("submit", async (event) => {
   event.preventDefault();

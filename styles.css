@@ -113,6 +113,11 @@ h3 {
   appearance: none;
 }
 
+.ghost-select option {
+  color: #111317;
+  background: #ffffff;
+}
+
 .file-button {
   position: relative;
   overflow: hidden;
@@ -222,10 +227,12 @@ input::placeholder {
   border-bottom: 1px solid var(--line-soft);
   cursor: pointer;
   transition: background 0.2s ease, transform 0.2s ease;
+  background: rgba(255, 255, 255, 0.92);
+  color: #111317;
 }
 
 .watch-item:hover {
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(255, 255, 255, 1);
 }
 
 .watch-item.active {
@@ -247,7 +254,7 @@ input::placeholder {
 }
 
 .watch-name {
-  color: #dce1ea;
+  color: #111317;
 }
 
 .import-note {
