@@ -1,6 +1,22 @@
-# CCI 雙向轉折觀察面板
+# Stock_K-chat
 
-直接開啟 `index.html` 即可使用。
+這是一個可直接部署到 GitHub Pages 的靜態股票觀察面板。
+
+本地使用時，直接開啟 `index.html` 即可。
+
+## GitHub Pages 部署
+
+這個 repo 已加入 GitHub Pages workflow。
+
+在 GitHub 倉庫中請確認：
+
+1. 進入 `Settings` -> `Pages`
+2. `Source` 選擇 `GitHub Actions`
+3. push 到 `main` 後，GitHub Actions 會自動部署
+
+部署完成後，網址通常會是：
+
+`https://fricachai.github.io/Stock_K-chat/`
 
 ## 功能
 
