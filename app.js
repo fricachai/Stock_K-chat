@@ -37,7 +37,7 @@ const state = {
   rawCandlesByCode: new Map(),
   selectedCode: null,
   loadingCodes: new Set(),
-  chartView: { visibleCount: 60, priceScale: 1, hoverZone: "", barOffset: 0, priceOffset: 0 },
+  chartView: { visibleCount: 36, priceScale: 1, hoverZone: "", barOffset: 0, priceOffset: 0 },
   chartLayout: null,
   timeframe: "4h",
   dragState: null,
@@ -498,7 +498,7 @@ function renderWatchlist() {
     item.className = `watch-item ${stock.code === state.selectedCode ? "active" : ""}`;
     item.innerHTML = `<span class="watch-code">${stock.code}</span><span class="watch-name">${stock.name}</span>`;
     item.addEventListener("click", async () => {
-      state.selectedCode = stock.code; state.chartView.priceScale = 1; renderAll();
+      state.selectedCode = stock.code; state.chartView.priceScale = 1; state.chartView.visibleCount = 36; state.chartView.barOffset = 0; state.chartView.priceOffset = 0; renderAll();
       if (!state.rawCandlesByCode.has(stock.code)) await ensureStockData(stock.code, stock.name);
     });
     watchlistEl.appendChild(item);
@@ -732,7 +732,7 @@ const clearDragState = (event) => {
 };
 canvas.addEventListener("pointerup", clearDragState);
 canvas.addEventListener("pointercancel", clearDragState);
-timeframeSelect.addEventListener("change", () => { state.timeframe = timeframeSelect.value; state.chartView.visibleCount = 60; state.chartView.priceScale = 1; renderAll(); });
+timeframeSelect.addEventListener("change", () => { state.timeframe = timeframeSelect.value; state.chartView.visibleCount = 36; state.chartView.priceScale = 1; state.chartView.barOffset = 0; state.chartView.priceOffset = 0; renderAll(); });
 stockForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   const code = codeInput.value.trim();
