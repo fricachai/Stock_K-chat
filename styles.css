@@ -143,6 +143,8 @@ h3 {
   display: block;
   border-radius: 18px;
   background: #0b0c10;
+  touch-action: none;
+  user-select: none;
 }
 
 .chart-help {
