@@ -182,17 +182,17 @@ function computeIndicator(candles) {
     const gapPrevSell = (prevCci ?? cciVal[i]) - (prevCciMa ?? cciMa[i]);
     const gapCurrSell = cciMa[i] - cciVal[i];
     const exactSellPrice = candle.open + clamp(gapPrevSell / Math.max(0.0001, gapPrevSell + gapCurrSell), 0, 1) * (candle.close - candle.open);
-    const allowBuy = settings.strict_trend ? greenTrend : true;
+    const allowBuy = true;
     const condCciBuy = crossover(cciVal[i], cciMa[i], prevCci, prevCciMa);
     const condCciEarly = settings.enable_early && isUnderMa && gapUp <= finalEarly && candle.close > candle.open && isCciRising;
     const wasOverMa = (prevCci ?? 0) > (prevCciMa ?? 0);
     const condCciReentry = isOverMa && wasOverMa && isCciRising && candle.close > prevClose;
     const isHoldingInitial = lastBuyPrice != null;
     const triggerNewBuy = (condCciBuy || condCciEarly || condCciReentry) && allowBuy && !isHoldingInitial;
-    const allowSell = settings.strict_trend ? !greenTrend : true;
+    const allowSell = true;
     const condCciSell = crossunder(cciVal[i], cciMa[i], prevCci, prevCciMa) && allowSell;
     const primedToCrossDown = isOverMa && gapDown <= finalSens && isCciFalling;
-    const allowDumpSell = settings.strict_trend ? !greenTrend : true;
+    const allowDumpSell = true;
     const condKDump = maxDrop >= settings.instant_drop && primedToCrossDown && allowDumpSell;
     const triggerSellHold = (condCciSell || condKDump) && isHoldingInitial;
     if (triggerSellHold) {
@@ -508,7 +508,7 @@ function renderChart(stock) {
     ["最新收盤價", round(lastCandle.close, 2), "#111317", "#f7c843"],
     ["當前浮動獲利", livePnl == null ? "未持倉" : `${round(livePnl, 2)}%`, "#111317", livePnl == null ? "#97a0af" : livePnl >= 0 ? "#15d18d" : "#ff5263"],
     ["當下幅度", `${round(liveKChange, 2)}%`, "#111317", liveKChange >= 0 ? "#15d18d" : "#ff5263"],
-    ["大趨勢保護", settings.strict_trend ? "已開啟 (安全)" : "已關閉 (危險)", "#111317", settings.strict_trend ? "#15d18d" : "#f7c843"],
+    ["大趨勢保護", "買賣點已不限制", "#111317", "#f7c843"],
     ["當前波段", isGreenTrend ? "多頭" : "空頭", "#111317", isGreenTrend ? "#15d18d" : "#ff5263"],
     ["預判狀態", distStr, "#111317", settings.enable_early ? "#f7c843" : "#97a0af"],
   ];
