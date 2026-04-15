@@ -11,6 +11,8 @@ const statusText = document.getElementById("statusText");
 const watchlistFileInput = document.getElementById("watchlistFileInput");
 const priceFileInput = document.getElementById("priceFileInput");
 const timeframeSelect = document.getElementById("timeframeSelect");
+const authorCard = document.querySelector(".author-card");
+const authorBubbles = [...document.querySelectorAll(".author-bubble")];
 
 const settings = {
   st_period: 6,
@@ -38,10 +40,65 @@ function setStatus(message, type = "") {
   statusText.className = `status-text${type ? ` ${type}` : ""}`;
 }
 function clamp(value, min, max) { return Math.max(min, Math.min(max, value)); }
+function rand(min, max) { return Math.random() * (max - min) + min; }
 function round(value, digits = 2) {
   if (!Number.isFinite(value)) return null;
   const factor = 10 ** digits;
   return Math.round(value * factor) / factor;
+}
+function getAuthorBorderPoint(width, height) {
+  const margin = 10;
+  const side = Math.floor(Math.random() * 4);
+  if (side === 0) return { x: rand(12, width - 12), y: -margin };
+  if (side === 1) return { x: width + margin, y: rand(10, height - 10) };
+  if (side === 2) return { x: rand(12, width - 12), y: height + margin };
+  return { x: -margin, y: rand(10, height - 10) };
+}
+function randomBubbleGradient() {
+  const palettes = [
+    ["#fff8bd", "#ff91d9"],
+    ["#fff6b8", "#ffc989"],
+    ["#f8ffff", "#9adfff"],
+    ["#fff6d8", "#cda6ff"],
+    ["#fff4ad", "#ff94c9"],
+  ];
+  const [a, b] = palettes[Math.floor(Math.random() * palettes.length)];
+  return `radial-gradient(circle at 34% 34%, ${a}, ${b} 56%, rgba(255,255,255,0.08) 78%, transparent 80%)`;
+}
+function animateAuthorBubble(bubble) {
+  if (!authorCard || !bubble) return;
+  const width = authorCard.offsetWidth;
+  const height = authorCard.offsetHeight;
+  if (!width || !height) return;
+  const start = getAuthorBorderPoint(width, height);
+  const end = getAuthorBorderPoint(width, height);
+  const size = rand(4, 12);
+  const duration = rand(2200, 7600);
+  const driftX = rand(-8, 8);
+  const driftY = rand(-8, 8);
+  bubble.style.width = `${size}px`;
+  bubble.style.height = `${size}px`;
+  bubble.style.background = randomBubbleGradient();
+  bubble.style.boxShadow = `0 0 ${Math.round(size + 4)}px rgba(255,255,255,0.42)`;
+  bubble.style.transform = `translate(${start.x}px, ${start.y}px)`;
+  bubble.getAnimations().forEach((anim) => anim.cancel());
+  const animation = bubble.animate(
+    [
+      { transform: `translate(${start.x}px, ${start.y}px) scale(${rand(0.7, 1.1)})`, opacity: rand(0.35, 0.9) },
+      { transform: `translate(${(start.x + end.x) / 2 + driftX}px, ${(start.y + end.y) / 2 + driftY}px) scale(${rand(0.9, 1.35)})`, opacity: rand(0.45, 1) },
+      { transform: `translate(${end.x}px, ${end.y}px) scale(${rand(0.55, 1.05)})`, opacity: rand(0.2, 0.75) },
+    ],
+    { duration, easing: "ease-in-out", fill: "forwards" },
+  );
+  animation.onfinish = () => {
+    setTimeout(() => animateAuthorBubble(bubble), rand(120, 900));
+  };
+}
+function initAuthorCardEffects() {
+  if (!authorCard || !authorBubbles.length) return;
+  authorBubbles.forEach((bubble, index) => {
+    setTimeout(() => animateAuthorBubble(bubble), index * 180);
+  });
 }
 function sma(values, length) {
   const result = Array(values.length).fill(null);
@@ -795,6 +852,7 @@ priceFileInput.addEventListener("change", (event) => {
 });
 window.addEventListener("resize", () => renderAll());
 async function bootstrap() {
+  initAuthorCardEffects();
   upsertStock({ code: "2330", name: "台積電" });
   state.selectedCode = "2330";
   renderAll();
