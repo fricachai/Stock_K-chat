@@ -18,15 +18,6 @@ const settings = {
   st_multiplier: 0.686,
   cci_len: 20,
   cci_ma_len: 14,
-  strict_trend: true,
-  enable_early: false,
-  use_dynamic: true,
-  sens_mult: 1.5,
-  early_mult: 0.5,
-  static_sens: 30,
-  static_early: 10,
-  instant_surge: 2,
-  instant_drop: 2,
 };
 
 const timeframeHours = { "1h": 1, "2h": 2, "3h": 3, "4h": 4, "1d": 24 };
@@ -152,61 +143,31 @@ function computeIndicator(candles) {
   const { stValue, trend } = supertrend(candles, settings.st_multiplier, settings.st_period);
   const cciVal = cci(candles, settings.cci_len);
   const cciMa = sma(cciVal, settings.cci_ma_len);
-  const cciTr = cciVal.map((value, i) => value == null ? null : Math.abs(value - (cciVal[i - 1] ?? value)));
-  const cciAtr = sma(cciTr, 14);
   const buySignals = [];
   const sellSignals = [];
   let lastBuyPrice = null;
   for (let i = 0; i < candles.length; i += 1) {
     const candle = candles[i];
     if (cciVal[i] == null || cciMa[i] == null) continue;
-    const greenTrend = trend[i] === -1;
-    const finalSens = settings.use_dynamic ? (cciAtr[i] ?? 0) * settings.sens_mult : settings.static_sens;
-    const finalEarly = settings.use_dynamic ? (cciAtr[i] ?? 0) * settings.early_mult : settings.static_early;
-    const maxSurge = ((candle.high - candle.open) / candle.open) * 100;
-    const maxDrop = ((candle.open - candle.low) / candle.open) * 100;
-    const gapUp = cciMa[i] - cciVal[i];
-    const gapDown = cciVal[i] - cciMa[i];
-    const isUnderMa = gapUp > 0;
-    const isOverMa = gapDown > 0;
     const prevCci = cciVal[i - 1];
     const prevCciMa = cciMa[i - 1];
-    const prevClose = candles[i - 1]?.close ?? candle.close;
-    const isCciRising = cciVal[i] > (prevCci ?? Number.NEGATIVE_INFINITY);
-    const isCciFalling = cciVal[i] < (prevCci ?? Number.POSITIVE_INFINITY);
-    const gapPrevBuy = (prevCciMa ?? cciMa[i]) - (prevCci ?? cciVal[i]);
-    const gapCurrBuy = cciVal[i] - cciMa[i];
-    const exactBuyPrice = candle.open + clamp(gapPrevBuy / Math.max(0.0001, gapPrevBuy + gapCurrBuy), 0, 1) * (candle.close - candle.open);
-    const gapUpPrev = (prevCciMa ?? cciMa[i]) - (prevCci ?? cciVal[i]);
-    const exactEarlyPrice = candle.open + clamp((gapUpPrev - finalEarly) / Math.max(0.0001, gapUpPrev - gapUp), 0, 1) * (candle.close - candle.open);
-    const gapPrevSell = (prevCci ?? cciVal[i]) - (prevCciMa ?? cciMa[i]);
-    const gapCurrSell = cciMa[i] - cciVal[i];
-    const exactSellPrice = candle.open + clamp(gapPrevSell / Math.max(0.0001, gapPrevSell + gapCurrSell), 0, 1) * (candle.close - candle.open);
-    const allowBuy = true;
     const condCciBuy = crossover(cciVal[i], cciMa[i], prevCci, prevCciMa);
-    const condCciEarly = settings.enable_early && isUnderMa && gapUp <= finalEarly && candle.close > candle.open && isCciRising;
-    const wasOverMa = (prevCci ?? 0) > (prevCciMa ?? 0);
-    const condCciReentry = isOverMa && wasOverMa && isCciRising && candle.close > prevClose;
     const isHoldingInitial = lastBuyPrice != null;
-    const triggerNewBuy = (condCciBuy || condCciEarly || condCciReentry) && allowBuy && !isHoldingInitial;
-    const allowSell = true;
-    const condCciSell = crossunder(cciVal[i], cciMa[i], prevCci, prevCciMa) && allowSell;
-    const primedToCrossDown = isOverMa && gapDown <= finalSens && isCciFalling;
-    const allowDumpSell = true;
-    const condKDump = maxDrop >= settings.instant_drop && primedToCrossDown && allowDumpSell;
-    const triggerSellHold = (condCciSell || condKDump) && isHoldingInitial;
+    const triggerNewBuy = condCciBuy && !isHoldingInitial;
+    const condCciSell = crossunder(cciVal[i], cciMa[i], prevCci, prevCciMa);
+    const triggerSellHold = condCciSell && isHoldingInitial;
     if (triggerSellHold) {
-      const execSell = condKDump ? candle.open * (1 - settings.instant_drop / 100) : exactSellPrice;
-      sellSignals.push({ index: i, price: execSell, pnl: ((execSell - lastBuyPrice) / lastBuyPrice) * 100, reason: condKDump ? "單根跌破 2%" : "死亡交叉" });
+      const execSell = candle.close;
+      sellSignals.push({ index: i, price: execSell, pnl: ((execSell - lastBuyPrice) / lastBuyPrice) * 100, reason: "死亡交叉" });
       lastBuyPrice = null;
     }
     if (triggerNewBuy) {
-      const execBuy = condCciEarly ? exactEarlyPrice : condCciBuy ? exactBuyPrice : candles[i - 1]?.close ?? candle.close;
-      buySignals.push({ index: i, price: execBuy, reason: condCciEarly ? "即將交叉" : condCciBuy ? "黃金交叉" : "接續買點" });
+      const execBuy = candle.close;
+      buySignals.push({ index: i, price: execBuy, reason: "黃金交叉" });
       lastBuyPrice = execBuy;
     }
   }
-  return { stValue, trend, cciVal, cciMa, cciAtr, buySignals, sellSignals };
+  return { stValue, trend, cciVal, cciMa, cciAtr: Array(candles.length).fill(null), buySignals, sellSignals };
 }
 function drawText(text, x, y, color = "#f5f6fa", size = 14, align = "left") {
   ctx.fillStyle = color;
@@ -287,11 +248,9 @@ function renderChart(stock) {
   const lastBuyPrice = computed.buySignals.length ? computed.buySignals[computed.buySignals.length - 1].price : null;
   const livePnl = lastBuyPrice == null ? null : ((lastCandle.close - lastBuyPrice) / lastBuyPrice) * 100;
   const liveKChange = ((lastCandle.close - lastCandle.open) / lastCandle.open) * 100;
-  const lastCciAtr = computed.cciAtr[candles.length - 1] ?? 0;
   const prevClose = candles[candles.length - 2]?.close ?? lastCandle.close;
   const changeValue = lastCandle.close - prevClose;
   const changePct = prevClose === 0 ? 0 : ((lastCandle.close / prevClose) - 1) * 100;
-  const distStr = settings.enable_early ? `< ${round((settings.use_dynamic ? lastCciAtr * settings.early_mult : settings.static_early), 1)} 點` : "已關閉提前預判";
   const priceArea = { x: 42, y: 72, w: 890, h: 350 };
   const xAxisArea = { x: 42, y: 430, w: 890, h: 38 };
   const priceScaleArea = { x: 932, y: 72, w: 78, h: 350 };
@@ -508,9 +467,7 @@ function renderChart(stock) {
     ["最新收盤價", round(lastCandle.close, 2), "#111317", "#f7c843"],
     ["當前浮動獲利", livePnl == null ? "未持倉" : `${round(livePnl, 2)}%`, "#111317", livePnl == null ? "#97a0af" : livePnl >= 0 ? "#15d18d" : "#ff5263"],
     ["當下幅度", `${round(liveKChange, 2)}%`, "#111317", liveKChange >= 0 ? "#15d18d" : "#ff5263"],
-    ["大趨勢保護", "買賣點已不限制", "#111317", "#f7c843"],
     ["當前波段", isGreenTrend ? "多頭" : "空頭", "#111317", isGreenTrend ? "#15d18d" : "#ff5263"],
-    ["預判狀態", distStr, "#111317", settings.enable_early ? "#f7c843" : "#97a0af"],
   ];
   rows.forEach((row, i) => {
     const top = infoArea.y + 14 + i * 36;
