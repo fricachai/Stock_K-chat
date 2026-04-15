@@ -795,6 +795,9 @@ priceFileInput.addEventListener("change", (event) => {
 });
 window.addEventListener("resize", () => renderAll());
 async function bootstrap() {
+  upsertStock({ code: "2330", name: "台積電" });
+  state.selectedCode = "2330";
+  renderAll();
   const ok = await ensureStockData("2330", "");
   if (!ok) loadDemoData();
 }
