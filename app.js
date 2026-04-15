@@ -159,33 +159,42 @@ function computeIndicator(candles) {
   let lastBuyPrice = null;
   for (let i = 0; i < candles.length; i += 1) {
     const candle = candles[i];
+    if (cciVal[i] == null || cciMa[i] == null) continue;
     const greenTrend = trend[i] === -1;
     const finalSens = settings.use_dynamic ? (cciAtr[i] ?? 0) * settings.sens_mult : settings.static_sens;
     const finalEarly = settings.use_dynamic ? (cciAtr[i] ?? 0) * settings.early_mult : settings.static_early;
+    const maxSurge = ((candle.high - candle.open) / candle.open) * 100;
     const maxDrop = ((candle.open - candle.low) / candle.open) * 100;
-    const gapUp = (cciMa[i] ?? 0) - (cciVal[i] ?? 0);
-    const gapDown = (cciVal[i] ?? 0) - (cciMa[i] ?? 0);
+    const gapUp = cciMa[i] - cciVal[i];
+    const gapDown = cciVal[i] - cciMa[i];
     const isUnderMa = gapUp > 0;
     const isOverMa = gapDown > 0;
-    const isCciRising = (cciVal[i] ?? 0) > (cciVal[i - 1] ?? Number.NEGATIVE_INFINITY);
-    const isCciFalling = (cciVal[i] ?? 0) < (cciVal[i - 1] ?? Number.POSITIVE_INFINITY);
-    const gapPrevBuy = (cciMa[i - 1] ?? 0) - (cciVal[i - 1] ?? 0);
-    const gapCurrBuy = (cciVal[i] ?? 0) - (cciMa[i] ?? 0);
+    const prevCci = cciVal[i - 1];
+    const prevCciMa = cciMa[i - 1];
+    const prevClose = candles[i - 1]?.close ?? candle.close;
+    const isCciRising = cciVal[i] > (prevCci ?? Number.NEGATIVE_INFINITY);
+    const isCciFalling = cciVal[i] < (prevCci ?? Number.POSITIVE_INFINITY);
+    const gapPrevBuy = (prevCciMa ?? cciMa[i]) - (prevCci ?? cciVal[i]);
+    const gapCurrBuy = cciVal[i] - cciMa[i];
     const exactBuyPrice = candle.open + clamp(gapPrevBuy / Math.max(0.0001, gapPrevBuy + gapCurrBuy), 0, 1) * (candle.close - candle.open);
-    const gapUpPrev = (cciMa[i - 1] ?? 0) - (cciVal[i - 1] ?? 0);
+    const gapUpPrev = (prevCciMa ?? cciMa[i]) - (prevCci ?? cciVal[i]);
     const exactEarlyPrice = candle.open + clamp((gapUpPrev - finalEarly) / Math.max(0.0001, gapUpPrev - gapUp), 0, 1) * (candle.close - candle.open);
-    const gapPrevSell = (cciVal[i - 1] ?? 0) - (cciMa[i - 1] ?? 0);
-    const gapCurrSell = (cciMa[i] ?? 0) - (cciVal[i] ?? 0);
+    const gapPrevSell = (prevCci ?? cciVal[i]) - (prevCciMa ?? cciMa[i]);
+    const gapCurrSell = cciMa[i] - cciVal[i];
     const exactSellPrice = candle.open + clamp(gapPrevSell / Math.max(0.0001, gapPrevSell + gapCurrSell), 0, 1) * (candle.close - candle.open);
-    const condCciBuy = crossover(cciVal[i], cciMa[i], cciVal[i - 1], cciMa[i - 1]);
+    const allowBuy = settings.strict_trend ? greenTrend : true;
+    const condCciBuy = crossover(cciVal[i], cciMa[i], prevCci, prevCciMa);
     const condCciEarly = settings.enable_early && isUnderMa && gapUp <= finalEarly && candle.close > candle.open && isCciRising;
-    const wasOverMa = (cciVal[i - 1] ?? 0) > (cciMa[i - 1] ?? 0);
-    const condCciReentry = isOverMa && wasOverMa && isCciRising && candle.close > (candles[i - 1]?.close ?? candle.close);
-    const triggerNewBuy = (condCciBuy || condCciEarly || condCciReentry) && (settings.strict_trend ? greenTrend : true) && lastBuyPrice == null;
-    const condCciSell = crossunder(cciVal[i], cciMa[i], cciVal[i - 1], cciMa[i - 1]) && (settings.strict_trend ? !greenTrend : true);
+    const wasOverMa = (prevCci ?? 0) > (prevCciMa ?? 0);
+    const condCciReentry = isOverMa && wasOverMa && isCciRising && candle.close > prevClose;
+    const isHoldingInitial = lastBuyPrice != null;
+    const triggerNewBuy = (condCciBuy || condCciEarly || condCciReentry) && allowBuy && !isHoldingInitial;
+    const allowSell = settings.strict_trend ? !greenTrend : true;
+    const condCciSell = crossunder(cciVal[i], cciMa[i], prevCci, prevCciMa) && allowSell;
     const primedToCrossDown = isOverMa && gapDown <= finalSens && isCciFalling;
-    const condKDump = maxDrop >= settings.instant_drop && primedToCrossDown && (settings.strict_trend ? !greenTrend : true);
-    const triggerSellHold = (condCciSell || condKDump) && lastBuyPrice != null;
+    const allowDumpSell = settings.strict_trend ? !greenTrend : true;
+    const condKDump = maxDrop >= settings.instant_drop && primedToCrossDown && allowDumpSell;
+    const triggerSellHold = (condCciSell || condKDump) && isHoldingInitial;
     if (triggerSellHold) {
       const execSell = condKDump ? candle.open * (1 - settings.instant_drop / 100) : exactSellPrice;
       sellSignals.push({ index: i, price: execSell, pnl: ((execSell - lastBuyPrice) / lastBuyPrice) * 100, reason: condKDump ? "單根跌破 2%" : "死亡交叉" });
@@ -373,12 +382,10 @@ function renderChart(stock) {
     const boxW = 124;
     const boxH = 24 + lines.length * 16;
     const desiredBoxY = isBuy ? y + 72 : y - boxH - 72;
-    const boxY = clamp(desiredBoxY, priceArea.y + 12, priceArea.y + priceArea.h - boxH - 12);
+    const boxY = desiredBoxY;
     const boxX = clamp(x - boxW / 2, priceArea.x + 8, priceArea.x + priceArea.w - boxW - 8);
     labelCallouts.push({ boxX, boxY, boxW, boxH, lines, fg, bg, targetX: x, targetY: y, isBuy });
   });
-  ctx.restore();
-
   labelCallouts.forEach((callout) => {
     const anchorX = clamp(callout.targetX, callout.boxX + 18, callout.boxX + callout.boxW - 18);
     const startY = callout.isBuy ? callout.boxY : callout.boxY + callout.boxH;
@@ -405,6 +412,7 @@ function renderChart(stock) {
     drawRoundRect(callout.boxX, callout.boxY, callout.boxW, callout.boxH, 8, callout.bg, null);
     callout.lines.forEach((line, idx) => drawText(line, callout.boxX + callout.boxW / 2, callout.boxY + 18 + idx * 16, callout.fg, 12, "center"));
   });
+  ctx.restore();
 
   const cciMin = Math.min(-100, ...visibleCci.filter((v) => v != null), ...visibleCciMa.filter((v) => v != null));
   const cciMax = Math.max(100, ...visibleCci.filter((v) => v != null), ...visibleCciMa.filter((v) => v != null));
