@@ -76,8 +76,11 @@ h1 {
   position: relative;
   overflow: hidden;
   isolation: isolate;
-  padding: 12px 20px;
-  border-radius: 18px;
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 18px 12px 20px;
+  border-radius: 20px;
   border: 1px solid rgba(255, 255, 255, 0.2);
   background:
     linear-gradient(180deg, rgba(17, 25, 40, 0.76), rgba(11, 16, 28, 0.88)),
@@ -95,6 +98,16 @@ h1 {
   letter-spacing: 0.02em;
   text-shadow: 0 1px 0 rgba(255, 255, 255, 0.08);
   z-index: 1;
+  transition: transform 180ms ease, box-shadow 220ms ease;
+}
+
+.author-card:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.05) inset,
+    0 16px 34px rgba(0, 0, 0, 0.34),
+    0 0 32px rgba(255, 122, 200, 0.34),
+    0 0 48px rgba(104, 180, 255, 0.26);
 }
 
 .author-card::before {
@@ -102,7 +115,7 @@ h1 {
   position: absolute;
   inset: 0;
   padding: 1.5px;
-  border-radius: 18px;
+  border-radius: 20px;
   background: linear-gradient(135deg, rgba(255, 168, 212, 0.95), rgba(181, 124, 255, 0.92) 36%, rgba(103, 212, 255, 0.96) 70%, rgba(255, 189, 151, 0.92));
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   -webkit-mask-composite: xor;
@@ -130,6 +143,133 @@ h1 {
   mix-blend-mode: screen;
   pointer-events: none;
   z-index: -1;
+}
+
+.author-copy {
+  position: relative;
+  z-index: 2;
+}
+
+.author-badge {
+  position: relative;
+  z-index: 2;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #f8fbff;
+  background:
+    radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.36), rgba(255, 255, 255, 0.08) 38%, rgba(32, 41, 72, 0.76) 72%),
+    linear-gradient(135deg, rgba(255, 168, 212, 0.5), rgba(107, 212, 255, 0.4));
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.24),
+    0 0 14px rgba(127, 193, 255, 0.24),
+    0 0 18px rgba(255, 118, 196, 0.18);
+  font-size: 16px;
+}
+
+.author-corner,
+.author-glow,
+.author-spark {
+  position: absolute;
+  pointer-events: none;
+}
+
+.author-corner {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.96), rgba(255, 173, 219, 0.78) 42%, rgba(255, 255, 255, 0) 74%);
+  box-shadow:
+    0 0 10px rgba(255, 155, 214, 0.72),
+    0 0 18px rgba(110, 206, 255, 0.36);
+  z-index: 2;
+}
+
+.corner-tl { top: 6px; left: 8px; }
+.corner-tr { top: 6px; right: 8px; }
+.corner-bl { bottom: 6px; left: 8px; }
+.corner-br { bottom: 6px; right: 8px; }
+
+.author-glow {
+  inset: auto;
+  border-radius: 999px;
+  filter: blur(18px);
+  opacity: 0.6;
+  z-index: 0;
+}
+
+.author-glow-a {
+  width: 92px;
+  height: 42px;
+  top: -8px;
+  left: 16px;
+  background: rgba(255, 111, 196, 0.42);
+}
+
+.author-glow-b {
+  width: 86px;
+  height: 40px;
+  right: 16px;
+  bottom: -10px;
+  background: rgba(88, 194, 255, 0.34);
+}
+
+.author-spark {
+  width: 4px;
+  height: 4px;
+  border-radius: 999px;
+  opacity: 0;
+  background: linear-gradient(135deg, #fff7b8, #ff8fd8 46%, #7ed3ff);
+  box-shadow:
+    0 0 8px rgba(255, 255, 255, 0.95),
+    0 0 14px rgba(255, 144, 220, 0.52),
+    0 0 18px rgba(103, 212, 255, 0.42);
+  z-index: 2;
+}
+
+.spark-1 { top: 22%; left: 16%; }
+.spark-2 { top: 66%; left: 28%; }
+.spark-3 { top: 26%; right: 24%; }
+.spark-4 { top: 62%; right: 16%; }
+.spark-5 { top: 44%; left: 58%; }
+
+.author-card:hover .author-spark {
+  animation: rainbowSpark 1.8s linear infinite;
+}
+
+.author-card:hover .spark-2 { animation-delay: 0.25s; }
+.author-card:hover .spark-3 { animation-delay: 0.5s; }
+.author-card:hover .spark-4 { animation-delay: 0.75s; }
+.author-card:hover .spark-5 { animation-delay: 1s; }
+
+@keyframes rainbowSpark {
+  0% {
+    opacity: 0;
+    transform: translate3d(-2px, 8px, 0) scale(0.4);
+    filter: hue-rotate(0deg);
+  }
+  20% {
+    opacity: 1;
+    transform: translate3d(2px, -4px, 0) scale(1);
+  }
+  50% {
+    opacity: 0.9;
+    transform: translate3d(-1px, -12px, 0) scale(1.2);
+    filter: hue-rotate(120deg);
+  }
+  80% {
+    opacity: 0.5;
+    transform: translate3d(3px, -18px, 0) scale(0.8);
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(0, -24px, 0) scale(0.35);
+    filter: hue-rotate(240deg);
+  }
 }
 
 .close-info {
