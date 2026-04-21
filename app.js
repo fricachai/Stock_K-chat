@@ -649,7 +649,7 @@ function parseCsv(text) {
     return Object.fromEntries(header.map((key, index) => [key, values[index] ?? ""]));
   });
 }
-function getRecentMonthKeys(count = 12) {
+function getRecentMonthKeys(count = 36) {
   const keys = [];
   const cursor = new Date(); cursor.setDate(1);
   for (let i = 0; i < count; i += 1) {
@@ -685,7 +685,7 @@ async function fetchTwseMonth(code, dateKey) {
   return { title: payload.title || "", rows };
 }
 async function fetchTwseStockData(code) {
-  const results = await Promise.all(getRecentMonthKeys(12).map((key) => fetchTwseMonth(code, key)));
+  const results = await Promise.all(getRecentMonthKeys(36).map((key) => fetchTwseMonth(code, key)));
   const nameSource = results.find((item) => item.title)?.title || "";
   const candles = results.flatMap((item) => item.rows).sort((a, b) => new Date(a.date) - new Date(b.date));
   const deduped = candles.filter((candle, index, array) => index === 0 || candle.date !== array[index - 1].date);
