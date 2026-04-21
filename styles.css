@@ -91,7 +91,7 @@ body.auth-locked {
     drop-shadow(0 0 10px rgba(255, 99, 200, 0.36))
     drop-shadow(0 0 14px rgba(124, 225, 255, 0.26))
     drop-shadow(0 0 18px rgba(180, 124, 255, 0.22));
-  animation: loginBorderLoop 3.4s linear infinite;
+  animation: loginBorderLoop 6.4s linear infinite;
 }
 
 .login-panel {
