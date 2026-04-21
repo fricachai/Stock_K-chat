@@ -30,7 +30,7 @@ const settings = {
 };
 
 const AUTH_CONFIG = {
-  username: "frica",
+  usernames: ["frica", "jimmy"],
   password: "stock2026",
 };
 
@@ -905,7 +905,7 @@ function handleLoginSubmit(event) {
   event.preventDefault();
   const username = loginUsername.value.trim();
   const password = loginPassword.value;
-  if (username !== AUTH_CONFIG.username || password !== AUTH_CONFIG.password) {
+  if (!AUTH_CONFIG.usernames.includes(username) || password !== AUTH_CONFIG.password) {
     setLoginStatus("帳號或密碼錯誤。", "error");
     loginPassword.value = "";
     loginPassword.focus();
