@@ -934,6 +934,5 @@ if (hasStoredAuth()) {
   bootstrap();
 } else {
   setGateLocked(true);
-  loginUsername.value = AUTH_CONFIG.username;
   setLoginStatus("請先登入後再進入面板。");
 }
