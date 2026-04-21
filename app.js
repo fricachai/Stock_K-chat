@@ -30,7 +30,7 @@ const settings = {
 };
 
 const AUTH_CONFIG = {
-  username: "fricachai",
+  username: "frica",
   password: "stock2026",
 };
 
