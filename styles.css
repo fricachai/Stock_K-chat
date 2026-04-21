@@ -161,7 +161,7 @@ body.auth-locked {
   justify-self: start;
   width: auto;
   max-width: fit-content;
-  gap: 10px;
+  gap: 4px;
   color: var(--muted);
   font-size: 14px;
   white-space: nowrap;
