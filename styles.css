@@ -54,10 +54,10 @@ body.auth-locked {
   width: min(100%, 420px);
   padding: 2px;
   border-radius: 22px;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.03);
   box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.04),
-    0 0 18px rgba(255, 255, 255, 0.05);
+    0 0 0 1px rgba(255, 255, 255, 0.08),
+    0 0 22px rgba(255, 255, 255, 0.04);
   overflow: hidden;
 }
 
@@ -66,34 +66,50 @@ body.auth-locked {
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.06));
-  opacity: 0.7;
+  padding: 2px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.26), rgba(255, 255, 255, 0.08));
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  opacity: 0.95;
   pointer-events: none;
 }
 
 .login-frame::after {
   content: "";
   position: absolute;
-  inset: -42%;
-  border-radius: 30px;
+  inset: 0;
+  padding: 2px;
+  border-radius: inherit;
   background: conic-gradient(
     from 0deg,
-    transparent 0deg 322deg,
-    rgba(255, 255, 255, 0.1) 328deg,
-    rgba(255, 156, 219, 0.98) 336deg,
-    rgba(124, 220, 255, 1) 344deg,
-    rgba(255, 228, 137, 0.92) 351deg,
-    rgba(255, 255, 255, 0.88) 356deg,
+    transparent 0deg 312deg,
+    rgba(255, 255, 255, 0.16) 320deg,
+    rgba(255, 126, 210, 1) 332deg,
+    rgba(112, 221, 255, 1) 343deg,
+    rgba(255, 225, 123, 0.98) 351deg,
+    rgba(255, 255, 255, 0.95) 356deg,
     transparent 360deg
   );
-  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 2px));
-  mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 2px));
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  mask-composite: exclude;
   filter:
-    blur(1px)
-    drop-shadow(0 0 10px rgba(255, 158, 221, 0.5))
-    drop-shadow(0 0 14px rgba(124, 220, 255, 0.38));
+    drop-shadow(0 0 10px rgba(255, 126, 210, 0.62))
+    drop-shadow(0 0 12px rgba(112, 221, 255, 0.48))
+    drop-shadow(0 0 14px rgba(255, 225, 123, 0.3));
   pointer-events: none;
-  animation: loginBorderSweep 2.8s linear infinite;
+  animation: loginBorderSweep 2.2s linear infinite;
 }
 
 .login-panel {
