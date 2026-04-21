@@ -79,6 +79,18 @@ function setLoginStatus(message, type = "") {
   loginStatus.textContent = message;
   loginStatus.className = `login-status${type ? ` ${type}` : ""}`;
 }
+function getDefaultVisibleCount(timeframe, candleCount = 0) {
+  if (timeframe === "1d") return clamp(candleCount || 240, 20, 260);
+  return 36;
+}
+function resetChartView(code = state.selectedCode) {
+  const { candles } = aggregateCandles(state.rawCandlesByCode.get(code) || [], state.timeframe);
+  state.chartView.visibleCount = getDefaultVisibleCount(state.timeframe, candles.length);
+  state.chartView.priceScale = 1;
+  state.chartView.barOffset = 0;
+  state.chartView.panX = 0;
+  state.chartView.panY = 0;
+}
 function round(value, digits = 2) {
   if (!Number.isFinite(value)) return null;
   const factor = 10 ** digits;
@@ -605,7 +617,7 @@ function renderWatchlist() {
     item.className = `watch-item ${stock.code === state.selectedCode ? "active" : ""}`;
     item.innerHTML = `<span class="watch-code">${stock.code}</span><span class="watch-name">${stock.name}</span>`;
     item.addEventListener("click", async () => {
-      state.selectedCode = stock.code; state.chartView.priceScale = 1; state.chartView.visibleCount = 36; state.chartView.barOffset = 0; state.chartView.panX = 0; state.chartView.panY = 0; renderAll();
+      state.selectedCode = stock.code; resetChartView(stock.code); renderAll();
       if (!state.rawCandlesByCode.has(stock.code)) await ensureStockData(stock.code, stock.name);
     });
     watchlistEl.appendChild(item);
@@ -637,7 +649,7 @@ function parseCsv(text) {
     return Object.fromEntries(header.map((key, index) => [key, values[index] ?? ""]));
   });
 }
-function getRecentMonthKeys(count = 8) {
+function getRecentMonthKeys(count = 12) {
   const keys = [];
   const cursor = new Date(); cursor.setDate(1);
   for (let i = 0; i < count; i += 1) {
@@ -673,7 +685,7 @@ async function fetchTwseMonth(code, dateKey) {
   return { title: payload.title || "", rows };
 }
 async function fetchTwseStockData(code) {
-  const results = await Promise.all(getRecentMonthKeys(8).map((key) => fetchTwseMonth(code, key)));
+  const results = await Promise.all(getRecentMonthKeys(12).map((key) => fetchTwseMonth(code, key)));
   const nameSource = results.find((item) => item.title)?.title || "";
   const candles = results.flatMap((item) => item.rows).sort((a, b) => new Date(a.date) - new Date(b.date));
   const deduped = candles.filter((candle, index, array) => index === 0 || candle.date !== array[index - 1].date);
@@ -689,6 +701,7 @@ async function ensureStockData(code, preferredName = "") {
     upsertStock({ code: result.code, name: preferredName || result.name });
     state.rawCandlesByCode.set(code, result.candles);
     state.selectedCode = code;
+    resetChartView(code);
     renderAll();
     if (state.timeframe === "1d") setStatus(`已載入 ${result.code} ${preferredName || result.name} 的官方日 K 資料。`, "success");
     return true;
@@ -739,16 +752,20 @@ function generateDemoCandles(code, name, seed, startPrice) {
   const rand = seededRandom(seed);
   const candles = [];
   let price = startPrice;
+  const startDate = new Date("2025-05-01T00:00:00");
   const endDate = new Date();
-  endDate.setMinutes(0, 0, 0);
-  for (let i = 0; i < 160; i += 1) {
-    const date = new Date(endDate);
-    date.setHours(endDate.getHours() - (159 - i));
-    const drift = Math.sin(i / 7) * 1.4 + (rand() - 0.5) * 4.2;
+  endDate.setHours(0, 0, 0, 0);
+  let index = 0;
+  for (let date = new Date(startDate); date <= endDate; date.setDate(date.getDate() + 1)) {
+    const day = date.getDay();
+    if (day === 0 || day === 6) continue;
+    const candleDate = new Date(date);
+    const drift = Math.sin(index / 7) * 1.4 + (rand() - 0.5) * 4.2;
     const open = price; const close = Math.max(10, open + drift);
     const high = Math.max(open, close) + rand() * 2.2; const low = Math.min(open, close) - rand() * 2.2;
-    candles.push({ date: date.toISOString(), open: round(open, 2), high: round(high, 2), low: round(Math.max(1, low), 2), close: round(close, 2), volume: Math.round(3000 + rand() * 6000) });
+    candles.push({ date: candleDate.toISOString(), open: round(open, 2), high: round(high, 2), low: round(Math.max(1, low), 2), close: round(close, 2), volume: Math.round(3000 + rand() * 6000) });
     price = close + (rand() - 0.5) * 0.9;
+    index += 1;
   }
   upsertStock({ code, name });
   state.rawCandlesByCode.set(code, candles);
@@ -763,8 +780,9 @@ function loadDemoData() {
   generateDemoCandles("2313", "華通", 509, 225);
   generateDemoCandles("2603", "長榮", 803, 228);
   state.selectedCode = "2330";
+  resetChartView("2330");
   renderAll();
-  setStatus("已載入 1 小時示範資料，預設以 1 日聚合顯示。", "success");
+  setStatus("官方資料載入失敗，已改用從 2025-05-01 開始的示範日 K 資料。", "success");
 }
 function getCanvasPoint(event) {
   const rect = canvas.getBoundingClientRect();
@@ -871,7 +889,7 @@ const clearDragState = (event) => {
 };
 canvas.addEventListener("pointerup", clearDragState);
 canvas.addEventListener("pointercancel", clearDragState);
-timeframeSelect.addEventListener("change", () => { state.timeframe = timeframeSelect.value; state.chartView.visibleCount = 36; state.chartView.priceScale = 1; state.chartView.barOffset = 0; state.chartView.panX = 0; state.chartView.panY = 0; renderAll(); });
+timeframeSelect.addEventListener("change", () => { state.timeframe = timeframeSelect.value; resetChartView(state.selectedCode); renderAll(); });
 stockForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   const code = codeInput.value.trim();
