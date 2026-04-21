@@ -54,12 +54,11 @@ body.auth-locked {
   width: min(100%, 420px);
   padding: 2px;
   border-radius: 22px;
-  background: rgba(255, 255, 255, 0.02);
+  background: rgba(255, 255, 255, 0.015);
   box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.14),
-    0 0 10px rgba(255, 162, 224, 0.18),
-    0 0 16px rgba(109, 214, 255, 0.16),
-    0 0 26px rgba(255, 255, 255, 0.06);
+    0 0 0 1px rgba(255, 255, 255, 0.08),
+    0 0 10px rgba(255, 142, 214, 0.16),
+    0 0 16px rgba(98, 212, 255, 0.14);
   overflow: hidden;
 }
 
@@ -71,12 +70,13 @@ body.auth-locked {
   padding: 2px;
   background: conic-gradient(
     from 0deg,
-    rgba(255, 255, 255, 0.9),
-    rgba(255, 170, 226, 0.96) 18%,
-    rgba(126, 221, 255, 0.98) 38%,
-    rgba(255, 228, 142, 0.92) 56%,
-    rgba(185, 157, 255, 0.96) 74%,
-    rgba(255, 255, 255, 0.9) 100%
+    rgba(255, 108, 198, 0.96) 0%,
+    rgba(255, 164, 116, 0.94) 16%,
+    rgba(255, 221, 109, 0.92) 32%,
+    rgba(104, 229, 255, 0.98) 50%,
+    rgba(116, 153, 255, 0.95) 68%,
+    rgba(198, 123, 255, 0.96) 84%,
+    rgba(255, 108, 198, 0.96) 100%
   );
   -webkit-mask:
     linear-gradient(#fff 0 0) content-box,
@@ -86,7 +86,7 @@ body.auth-locked {
     linear-gradient(#fff 0 0) content-box,
     linear-gradient(#fff 0 0);
   mask-composite: exclude;
-  opacity: 0.9;
+  opacity: 1;
   pointer-events: none;
   animation: loginFrameClockwise 3.6s linear infinite;
 }
@@ -96,11 +96,11 @@ body.auth-locked {
   position: absolute;
   inset: -1px;
   border-radius: inherit;
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.06);
   filter:
-    drop-shadow(0 0 10px rgba(255, 150, 220, 0.34))
-    drop-shadow(0 0 16px rgba(112, 221, 255, 0.28))
-    drop-shadow(0 0 22px rgba(255, 228, 142, 0.14));
+    drop-shadow(0 0 10px rgba(255, 116, 204, 0.26))
+    drop-shadow(0 0 14px rgba(98, 212, 255, 0.24))
+    drop-shadow(0 0 18px rgba(255, 208, 98, 0.16));
   pointer-events: none;
 }
 
