@@ -191,11 +191,12 @@ body.auth-locked {
 .remember-me input {
   flex: 0 0 auto;
   accent-color: #f7c843;
-  margin-right: 2px;
+  margin: 0;
 }
 
 .remember-me span {
   white-space: nowrap;
+  margin-left: 0;
 }
 
 .login-status {
