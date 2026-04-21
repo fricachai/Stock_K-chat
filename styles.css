@@ -151,6 +151,25 @@ body.auth-locked {
   font-size: 15px;
   font-weight: 700;
   cursor: pointer;
+  transition:
+    transform 180ms ease,
+    border-color 220ms ease,
+    box-shadow 220ms ease,
+    background 220ms ease;
+}
+
+.login-form button:hover {
+  transform: translateY(-1px);
+  border-color: rgba(146, 214, 255, 0.5);
+  background: linear-gradient(180deg, rgba(255, 140, 213, 0.28), rgba(110, 213, 255, 0.18) 52%, rgba(247, 200, 67, 0.18));
+  box-shadow:
+    0 0 12px rgba(255, 138, 216, 0.28),
+    0 0 20px rgba(110, 213, 255, 0.2),
+    0 0 28px rgba(247, 200, 67, 0.12);
+}
+
+.login-form button:active {
+  transform: translateY(0);
 }
 
 .remember-me {
@@ -161,7 +180,7 @@ body.auth-locked {
   justify-self: start;
   width: auto;
   max-width: fit-content;
-  gap: 4px;
+  gap: 0;
   color: var(--muted);
   font-size: 14px;
   white-space: nowrap;
@@ -172,6 +191,7 @@ body.auth-locked {
 .remember-me input {
   flex: 0 0 auto;
   accent-color: #f7c843;
+  margin-right: 2px;
 }
 
 .remember-me span {
