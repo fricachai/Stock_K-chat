@@ -69,15 +69,29 @@ body.auth-locked {
   overflow: visible;
 }
 
-.login-border-stroke {
+.login-border-base,
+.login-border-cycle {
   fill: none;
   stroke: url(#loginBorderGradient);
   stroke-width: 3;
   stroke-linecap: round;
+}
+
+.login-border-base {
+  opacity: 0.42;
   filter:
-    drop-shadow(0 0 8px rgba(255, 99, 200, 0.28))
-    drop-shadow(0 0 12px rgba(124, 225, 255, 0.2))
-    drop-shadow(0 0 16px rgba(180, 124, 255, 0.18));
+    drop-shadow(0 0 6px rgba(255, 99, 200, 0.18))
+    drop-shadow(0 0 10px rgba(124, 225, 255, 0.14));
+}
+
+.login-border-cycle {
+  stroke-dasharray: 320 1600;
+  stroke-dashoffset: 0;
+  filter:
+    drop-shadow(0 0 10px rgba(255, 99, 200, 0.36))
+    drop-shadow(0 0 14px rgba(124, 225, 255, 0.26))
+    drop-shadow(0 0 18px rgba(180, 124, 255, 0.22));
+  animation: loginBorderLoop 3.4s linear infinite;
 }
 
 .login-panel {
@@ -88,6 +102,15 @@ body.auth-locked {
   border-radius: 20px;
   background: linear-gradient(180deg, rgba(17, 20, 27, 0.96), rgba(11, 13, 18, 0.98));
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.38);
+}
+
+@keyframes loginBorderLoop {
+  from {
+    stroke-dashoffset: 0;
+  }
+  to {
+    stroke-dashoffset: -1920;
+  }
 }
 
 .login-panel h2 {
