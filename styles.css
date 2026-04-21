@@ -156,11 +156,14 @@ body.auth-locked {
 .remember-me {
   display: inline-flex;
   align-items: center;
+  justify-content: flex-start;
+  align-self: flex-start;
   gap: 10px;
   color: var(--muted);
   font-size: 14px;
   white-space: nowrap;
   flex-wrap: nowrap;
+  text-align: left;
 }
 
 .remember-me input {
