@@ -160,12 +160,12 @@ body.auth-locked {
 
 .login-form button:hover {
   transform: translateY(-1px);
-  border-color: rgba(146, 214, 255, 0.5);
-  background: linear-gradient(180deg, rgba(255, 140, 213, 0.28), rgba(110, 213, 255, 0.18) 52%, rgba(247, 200, 67, 0.18));
+  border-color: rgba(197, 162, 255, 0.56);
+  background: linear-gradient(180deg, rgba(214, 184, 255, 0.34), rgba(180, 147, 255, 0.24) 56%, rgba(143, 121, 255, 0.18));
   box-shadow:
-    0 0 12px rgba(255, 138, 216, 0.28),
-    0 0 20px rgba(110, 213, 255, 0.2),
-    0 0 28px rgba(247, 200, 67, 0.12);
+    0 0 12px rgba(208, 176, 255, 0.28),
+    0 0 20px rgba(176, 143, 255, 0.24),
+    0 0 28px rgba(145, 120, 255, 0.14);
 }
 
 .login-form button:active {
