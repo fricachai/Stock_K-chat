@@ -9,10 +9,28 @@
 <body>
   <div id="loginGate" class="login-gate">
     <div class="login-frame">
-      <span class="login-border login-border-top"></span>
-      <span class="login-border login-border-right"></span>
-      <span class="login-border login-border-bottom"></span>
-      <span class="login-border login-border-left"></span>
+      <svg class="login-border-svg" viewBox="0 0 420 520" preserveAspectRatio="none" aria-hidden="true">
+        <defs>
+          <linearGradient id="loginBorderGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#ff63c8">
+              <animate attributeName="offset" values="-1;1" dur="3.4s" repeatCount="indefinite" />
+            </stop>
+            <stop offset="20%" stop-color="#ffbe72">
+              <animate attributeName="offset" values="-0.8;1.2" dur="3.4s" repeatCount="indefinite" />
+            </stop>
+            <stop offset="40%" stop-color="#7ce1ff">
+              <animate attributeName="offset" values="-0.6;1.4" dur="3.4s" repeatCount="indefinite" />
+            </stop>
+            <stop offset="60%" stop-color="#b47cff">
+              <animate attributeName="offset" values="-0.4;1.6" dur="3.4s" repeatCount="indefinite" />
+            </stop>
+            <stop offset="80%" stop-color="#ff63c8">
+              <animate attributeName="offset" values="-0.2;1.8" dur="3.4s" repeatCount="indefinite" />
+            </stop>
+          </linearGradient>
+        </defs>
+        <rect x="1.5" y="1.5" width="417" height="517" rx="22" ry="22" class="login-border-stroke" />
+      </svg>
       <div class="login-panel">
         <h2>登入股票觀察面板</h2>
         <form id="loginForm" class="login-form">

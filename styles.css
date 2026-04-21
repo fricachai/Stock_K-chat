@@ -59,71 +59,25 @@ body.auth-locked {
   overflow: hidden;
 }
 
-.login-border {
+.login-border-svg {
   position: absolute;
-  pointer-events: none;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   z-index: 2;
+  pointer-events: none;
+  overflow: visible;
 }
 
-.login-border-top,
-.login-border-bottom {
-  left: 18px;
-  right: 18px;
-  height: 2px;
-}
-
-.login-border-left,
-.login-border-right {
-  top: 18px;
-  bottom: 18px;
-  width: 2px;
-}
-
-.login-border-top {
-  top: 0;
-  border-radius: 999px;
-  background: linear-gradient(90deg, #ff63c8, #ffbe72, #7ce1ff, #b47cff, #ff63c8);
-  background-size: 220% 100%;
-  box-shadow:
-    0 0 8px rgba(255, 99, 200, 0.32),
-    0 0 12px rgba(124, 225, 255, 0.18);
-  animation: loginBorderSlideX 2.6s linear infinite;
-}
-
-.login-border-right {
-  right: 0;
-  border-radius: 999px;
-  background: linear-gradient(180deg, #ffbe72, #7ce1ff, #b47cff, #ff63c8, #ffbe72);
-  background-size: 100% 220%;
-  box-shadow:
-    0 0 8px rgba(124, 225, 255, 0.24),
-    0 0 12px rgba(180, 124, 255, 0.2);
-  animation: loginBorderSlideY 2.6s linear infinite;
-  animation-delay: -0.65s;
-}
-
-.login-border-bottom {
-  bottom: 0;
-  border-radius: 999px;
-  background: linear-gradient(90deg, #7ce1ff, #b47cff, #ff63c8, #ffbe72, #7ce1ff);
-  background-size: 220% 100%;
-  box-shadow:
-    0 0 8px rgba(180, 124, 255, 0.22),
-    0 0 12px rgba(255, 99, 200, 0.22);
-  animation: loginBorderSlideXReverse 2.6s linear infinite;
-  animation-delay: -1.3s;
-}
-
-.login-border-left {
-  left: 0;
-  border-radius: 999px;
-  background: linear-gradient(180deg, #b47cff, #ff63c8, #ffbe72, #7ce1ff, #b47cff);
-  background-size: 100% 220%;
-  box-shadow:
-    0 0 8px rgba(255, 99, 200, 0.22),
-    0 0 12px rgba(255, 190, 114, 0.18);
-  animation: loginBorderSlideYReverse 2.6s linear infinite;
-  animation-delay: -1.95s;
+.login-border-stroke {
+  fill: none;
+  stroke: url(#loginBorderGradient);
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  filter:
+    drop-shadow(0 0 8px rgba(255, 99, 200, 0.28))
+    drop-shadow(0 0 12px rgba(124, 225, 255, 0.2))
+    drop-shadow(0 0 16px rgba(180, 124, 255, 0.18));
 }
 
 .login-panel {
@@ -204,42 +158,6 @@ body.auth-locked {
 
 .login-status.error {
   color: #ffd7dd;
-}
-
-@keyframes loginBorderSlideX {
-  from {
-    background-position: 0% 50%;
-  }
-  to {
-    background-position: 200% 50%;
-  }
-}
-
-@keyframes loginBorderSlideXReverse {
-  from {
-    background-position: 200% 50%;
-  }
-  to {
-    background-position: 0% 50%;
-  }
-}
-
-@keyframes loginBorderSlideY {
-  from {
-    background-position: 50% 0%;
-  }
-  to {
-    background-position: 50% 200%;
-  }
-}
-
-@keyframes loginBorderSlideYReverse {
-  from {
-    background-position: 50% 200%;
-  }
-  to {
-    background-position: 50% 0%;
-  }
 }
 
 .app-shell--hidden {
