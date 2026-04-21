@@ -54,7 +54,7 @@ body.auth-locked {
   width: min(100%, 420px);
   padding: 2px;
   border-radius: 22px;
-  background: rgba(255, 255, 255, 0.015);
+  background: transparent;
   box-shadow:
     0 0 0 1px rgba(255, 255, 255, 0.08),
     0 0 10px rgba(255, 142, 214, 0.16),
@@ -67,7 +67,6 @@ body.auth-locked {
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  padding: 2px;
   background: conic-gradient(
     from 0deg,
     rgba(255, 108, 198, 0.96) 0%,
@@ -78,16 +77,9 @@ body.auth-locked {
     rgba(198, 123, 255, 0.96) 84%,
     rgba(255, 108, 198, 0.96) 100%
   );
-  -webkit-mask:
-    linear-gradient(#fff 0 0) content-box,
-    linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask:
-    linear-gradient(#fff 0 0) content-box,
-    linear-gradient(#fff 0 0);
-  mask-composite: exclude;
   opacity: 1;
   pointer-events: none;
+  z-index: 0;
   animation: loginFrameClockwise 3.6s linear infinite;
 }
 
@@ -106,6 +98,7 @@ body.auth-locked {
 
 .login-panel {
   position: relative;
+  z-index: 1;
   width: 100%;
   padding: 28px;
   border-radius: 20px;
