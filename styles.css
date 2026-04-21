@@ -45,33 +45,6 @@ body.auth-locked {
   z-index: 30;
 }
 
-.login-gate::before {
-  content: "";
-  position: absolute;
-  inset: 12px;
-  border-radius: 26px;
-  padding: 2px;
-  background: conic-gradient(
-    from 0deg,
-    rgba(255, 255, 255, 0.85),
-    rgba(255, 120, 214, 0.95),
-    rgba(101, 209, 255, 0.95),
-    rgba(255, 215, 98, 0.9),
-    rgba(255, 255, 255, 0.85)
-  );
-  -webkit-mask:
-    linear-gradient(#fff 0 0) content-box,
-    linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask:
-    linear-gradient(#fff 0 0) content-box,
-    linear-gradient(#fff 0 0);
-  mask-composite: exclude;
-  filter: blur(1.4px) drop-shadow(0 0 12px rgba(255, 136, 216, 0.32)) drop-shadow(0 0 18px rgba(101, 209, 255, 0.26));
-  pointer-events: none;
-  animation: gateNeonSpin 3.8s linear infinite;
-}
-
 .login-gate--hidden {
   display: none;
 }
@@ -84,6 +57,40 @@ body.auth-locked {
   border-radius: 20px;
   background: linear-gradient(180deg, rgba(17, 20, 27, 0.96), rgba(11, 13, 18, 0.98));
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.38);
+  overflow: hidden;
+}
+
+.login-panel::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: 20px;
+  padding: 1.5px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.04)) padding-box,
+    conic-gradient(
+      from 0deg,
+      rgba(255, 255, 255, 0.06),
+      rgba(255, 255, 255, 0.06) 22%,
+      rgba(255, 148, 216, 0.92) 27%,
+      rgba(121, 214, 255, 0.98) 33%,
+      rgba(255, 219, 113, 0.86) 38%,
+      rgba(255, 255, 255, 0.08) 46%,
+      rgba(255, 255, 255, 0.06) 100%
+    ) border-box;
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+  filter:
+    drop-shadow(0 0 8px rgba(255, 151, 220, 0.16))
+    drop-shadow(0 0 12px rgba(102, 209, 255, 0.14));
+  animation: loginBorderGlow 3.2s linear infinite;
 }
 
 .login-panel h2 {
@@ -156,7 +163,7 @@ body.auth-locked {
   color: #ffd7dd;
 }
 
-@keyframes gateNeonSpin {
+@keyframes loginBorderGlow {
   from {
     transform: rotate(0deg);
   }
