@@ -158,6 +158,9 @@ body.auth-locked {
   align-items: center;
   justify-content: flex-start;
   align-self: flex-start;
+  justify-self: start;
+  width: auto;
+  max-width: fit-content;
   gap: 10px;
   color: var(--muted);
   font-size: 14px;
