@@ -63,7 +63,6 @@ body.auth-locked {
   position: absolute;
   pointer-events: none;
   z-index: 2;
-  animation: loginBorderHue 3.8s linear infinite;
 }
 
 .login-border-top,
@@ -84,39 +83,47 @@ body.auth-locked {
   top: 0;
   border-radius: 999px;
   background: linear-gradient(90deg, #ff63c8, #ffbe72, #7ce1ff, #b47cff, #ff63c8);
+  background-size: 220% 100%;
   box-shadow:
     0 0 8px rgba(255, 99, 200, 0.32),
     0 0 12px rgba(124, 225, 255, 0.18);
+  animation: loginBorderSlideX 2.6s linear infinite;
 }
 
 .login-border-right {
   right: 0;
   border-radius: 999px;
   background: linear-gradient(180deg, #ffbe72, #7ce1ff, #b47cff, #ff63c8, #ffbe72);
+  background-size: 100% 220%;
   box-shadow:
     0 0 8px rgba(124, 225, 255, 0.24),
     0 0 12px rgba(180, 124, 255, 0.2);
-  animation-delay: -0.95s;
+  animation: loginBorderSlideY 2.6s linear infinite;
+  animation-delay: -0.65s;
 }
 
 .login-border-bottom {
   bottom: 0;
   border-radius: 999px;
   background: linear-gradient(90deg, #7ce1ff, #b47cff, #ff63c8, #ffbe72, #7ce1ff);
+  background-size: 220% 100%;
   box-shadow:
     0 0 8px rgba(180, 124, 255, 0.22),
     0 0 12px rgba(255, 99, 200, 0.22);
-  animation-delay: -1.9s;
+  animation: loginBorderSlideXReverse 2.6s linear infinite;
+  animation-delay: -1.3s;
 }
 
 .login-border-left {
   left: 0;
   border-radius: 999px;
   background: linear-gradient(180deg, #b47cff, #ff63c8, #ffbe72, #7ce1ff, #b47cff);
+  background-size: 100% 220%;
   box-shadow:
     0 0 8px rgba(255, 99, 200, 0.22),
     0 0 12px rgba(255, 190, 114, 0.18);
-  animation-delay: -2.85s;
+  animation: loginBorderSlideYReverse 2.6s linear infinite;
+  animation-delay: -1.95s;
 }
 
 .login-panel {
@@ -199,15 +206,39 @@ body.auth-locked {
   color: #ffd7dd;
 }
 
-@keyframes loginBorderHue {
-  0% {
-    filter: hue-rotate(0deg) saturate(1);
+@keyframes loginBorderSlideX {
+  from {
+    background-position: 0% 50%;
   }
-  50% {
-    filter: hue-rotate(120deg) saturate(1.15);
+  to {
+    background-position: 200% 50%;
   }
-  100% {
-    filter: hue-rotate(360deg) saturate(1);
+}
+
+@keyframes loginBorderSlideXReverse {
+  from {
+    background-position: 200% 50%;
+  }
+  to {
+    background-position: 0% 50%;
+  }
+}
+
+@keyframes loginBorderSlideY {
+  from {
+    background-position: 50% 0%;
+  }
+  to {
+    background-position: 50% 200%;
+  }
+}
+
+@keyframes loginBorderSlideYReverse {
+  from {
+    background-position: 50% 200%;
+  }
+  to {
+    background-position: 50% 0%;
   }
 }
 
