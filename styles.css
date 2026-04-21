@@ -26,6 +26,104 @@ body {
   color: var(--text);
 }
 
+body.auth-locked {
+  overflow: hidden;
+}
+
+.login-gate {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background:
+    radial-gradient(circle at top left, rgba(54, 104, 190, 0.18), transparent 24%),
+    radial-gradient(circle at bottom right, rgba(255, 152, 17, 0.08), transparent 20%),
+    rgba(4, 6, 10, 0.86);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  z-index: 30;
+}
+
+.login-gate--hidden {
+  display: none;
+}
+
+.login-panel {
+  width: min(100%, 420px);
+  padding: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  background: linear-gradient(180deg, rgba(17, 20, 27, 0.96), rgba(11, 13, 18, 0.98));
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.38);
+}
+
+.login-panel h2 {
+  margin-top: 6px;
+  font-size: 28px;
+}
+
+.login-note {
+  margin-top: 10px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.login-form {
+  display: grid;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.login-form input[type="text"],
+.login-form input[type="password"] {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text);
+  font-size: 15px;
+}
+
+.login-form button {
+  border: 1px solid rgba(247, 200, 67, 0.28);
+  border-radius: 14px;
+  padding: 12px 14px;
+  background: linear-gradient(180deg, rgba(247, 200, 67, 0.26), rgba(247, 200, 67, 0.12));
+  color: #fff9de;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.remember-me {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.remember-me input {
+  accent-color: #f7c843;
+}
+
+.login-status {
+  margin-top: 14px;
+  min-height: 22px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.login-status.error {
+  color: #ffd7dd;
+}
+
+.app-shell--hidden {
+  visibility: hidden;
+}
+
 .app-shell {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 420px;
@@ -309,6 +407,10 @@ h3 {
   border-radius: 12px;
   cursor: pointer;
   font-size: 14px;
+}
+
+#logoutButton {
+  flex-shrink: 0;
 }
 
 .ghost-select {

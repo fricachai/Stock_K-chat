@@ -7,7 +7,25 @@
   <link rel="stylesheet" href="./styles.css" />
 </head>
 <body>
-  <div class="app-shell">
+  <div id="loginGate" class="login-gate">
+    <div class="login-panel">
+      <p class="eyebrow">前端簡易門禁</p>
+      <h2>登入股票觀察面板</h2>
+      <p class="login-note">此登入只做基本門禁，帳密驗證寫在前端，不適合真正安全用途。</p>
+      <form id="loginForm" class="login-form">
+        <input id="loginUsername" type="text" autocomplete="username" placeholder="帳號" />
+        <input id="loginPassword" type="password" autocomplete="current-password" placeholder="密碼" />
+        <label class="remember-me">
+          <input id="rememberLogin" type="checkbox" />
+          <span>記住登入狀態</span>
+        </label>
+        <button type="submit">登入</button>
+      </form>
+      <p id="loginStatus" class="login-status">請先登入後再進入面板。</p>
+    </div>
+  </div>
+
+  <div id="appShell" class="app-shell app-shell--hidden" aria-hidden="true">
     <main class="chart-panel">
       <header class="chart-header">
         <div>
@@ -40,6 +58,7 @@
             匯入 K 線 CSV
             <input id="priceFileInput" type="file" accept=".csv" hidden />
           </label>
+          <button id="logoutButton" type="button" class="ghost-button">登出</button>
         </div>
       </header>
 

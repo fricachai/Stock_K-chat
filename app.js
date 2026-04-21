@@ -1,5 +1,13 @@
 ﻿const canvas = document.getElementById("chartCanvas");
 const ctx = canvas.getContext("2d");
+const appShell = document.getElementById("appShell");
+const loginGate = document.getElementById("loginGate");
+const loginForm = document.getElementById("loginForm");
+const loginUsername = document.getElementById("loginUsername");
+const loginPassword = document.getElementById("loginPassword");
+const rememberLogin = document.getElementById("rememberLogin");
+const loginStatus = document.getElementById("loginStatus");
+const logoutButton = document.getElementById("logoutButton");
 const chartTitle = document.getElementById("chartTitle");
 const closeInfo = document.getElementById("closeInfo");
 const watchlistEl = document.getElementById("watchlist");
@@ -21,6 +29,13 @@ const settings = {
   cci_ma_len: 14,
 };
 
+const AUTH_CONFIG = {
+  username: "fricachai",
+  password: "stock2026",
+};
+
+const AUTH_STORAGE_KEY = "stock-k-chat-auth";
+
 const timeframeHours = { "1h": 1, "2h": 2, "3h": 3, "4h": 4, "1d": 24 };
 const timeframeLabels = { "1h": "1小時", "2h": "2小時", "3h": "3小時", "4h": "4小時", "1d": "1日" };
 
@@ -41,6 +56,29 @@ function setStatus(message, type = "") {
 }
 function clamp(value, min, max) { return Math.max(min, Math.min(max, value)); }
 function rand(min, max) { return Math.random() * (max - min) + min; }
+function getAuthStorage(remember) { return remember ? window.localStorage : window.sessionStorage; }
+function hasStoredAuth() {
+  return window.localStorage.getItem(AUTH_STORAGE_KEY) === "1" || window.sessionStorage.getItem(AUTH_STORAGE_KEY) === "1";
+}
+function persistAuth(remember) {
+  window.localStorage.removeItem(AUTH_STORAGE_KEY);
+  window.sessionStorage.removeItem(AUTH_STORAGE_KEY);
+  getAuthStorage(remember).setItem(AUTH_STORAGE_KEY, "1");
+}
+function clearAuth() {
+  window.localStorage.removeItem(AUTH_STORAGE_KEY);
+  window.sessionStorage.removeItem(AUTH_STORAGE_KEY);
+}
+function setGateLocked(locked) {
+  document.body.classList.toggle("auth-locked", locked);
+  appShell.classList.toggle("app-shell--hidden", locked);
+  appShell.setAttribute("aria-hidden", locked ? "true" : "false");
+  loginGate.classList.toggle("login-gate--hidden", !locked);
+}
+function setLoginStatus(message, type = "") {
+  loginStatus.textContent = message;
+  loginStatus.className = `login-status${type ? ` ${type}` : ""}`;
+}
 function round(value, digits = 2) {
   if (!Number.isFinite(value)) return null;
   const factor = 10 ** digits;
@@ -852,6 +890,8 @@ priceFileInput.addEventListener("change", (event) => {
 });
 window.addEventListener("resize", () => renderAll());
 async function bootstrap() {
+  if (bootstrap.started) return;
+  bootstrap.started = true;
   initAuthorCardEffects();
   upsertStock({ code: "2330", name: "台積電" });
   state.selectedCode = "2330";
@@ -859,4 +899,41 @@ async function bootstrap() {
   const ok = await ensureStockData("2330", "");
   if (!ok) loadDemoData();
 }
-bootstrap();
+bootstrap.started = false;
+
+function handleLoginSubmit(event) {
+  event.preventDefault();
+  const username = loginUsername.value.trim();
+  const password = loginPassword.value;
+  if (username !== AUTH_CONFIG.username || password !== AUTH_CONFIG.password) {
+    setLoginStatus("帳號或密碼錯誤。", "error");
+    loginPassword.value = "";
+    loginPassword.focus();
+    return;
+  }
+  persistAuth(rememberLogin.checked);
+  setLoginStatus("登入成功。");
+  setGateLocked(false);
+  bootstrap();
+}
+
+function handleLogout() {
+  clearAuth();
+  bootstrap.started = false;
+  setGateLocked(true);
+  setLoginStatus("請先登入後再進入面板。");
+  loginPassword.value = "";
+  loginUsername.focus();
+}
+
+loginForm.addEventListener("submit", handleLoginSubmit);
+logoutButton.addEventListener("click", handleLogout);
+
+if (hasStoredAuth()) {
+  setGateLocked(false);
+  bootstrap();
+} else {
+  setGateLocked(true);
+  loginUsername.value = AUTH_CONFIG.username;
+  setLoginStatus("請先登入後再進入面板。");
+}
