@@ -45,11 +45,39 @@ body.auth-locked {
   z-index: 30;
 }
 
+.login-gate::before {
+  content: "";
+  position: absolute;
+  inset: 12px;
+  border-radius: 26px;
+  padding: 2px;
+  background: conic-gradient(
+    from 0deg,
+    rgba(255, 255, 255, 0.85),
+    rgba(255, 120, 214, 0.95),
+    rgba(101, 209, 255, 0.95),
+    rgba(255, 215, 98, 0.9),
+    rgba(255, 255, 255, 0.85)
+  );
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  filter: blur(1.4px) drop-shadow(0 0 12px rgba(255, 136, 216, 0.32)) drop-shadow(0 0 18px rgba(101, 209, 255, 0.26));
+  pointer-events: none;
+  animation: gateNeonSpin 3.8s linear infinite;
+}
+
 .login-gate--hidden {
   display: none;
 }
 
 .login-panel {
+  position: relative;
   width: min(100%, 420px);
   padding: 28px;
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -61,6 +89,7 @@ body.auth-locked {
 .login-panel h2 {
   margin-top: 6px;
   font-size: 28px;
+  text-align: center;
 }
 
 .login-note {
@@ -103,10 +132,17 @@ body.auth-locked {
   gap: 10px;
   color: var(--muted);
   font-size: 14px;
+  white-space: nowrap;
+  flex-wrap: nowrap;
 }
 
 .remember-me input {
+  flex: 0 0 auto;
   accent-color: #f7c843;
+}
+
+.remember-me span {
+  white-space: nowrap;
 }
 
 .login-status {
@@ -118,6 +154,15 @@ body.auth-locked {
 
 .login-status.error {
   color: #ffd7dd;
+}
+
+@keyframes gateNeonSpin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .app-shell--hidden {
