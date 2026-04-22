@@ -871,12 +871,23 @@ function extractNameFromTitle(title, code) {
 }
 async function fetchTwseMonth(code, dateKey) {
   const url = `https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=${dateKey}&stockNo=${encodeURIComponent(code)}`;
-  const response = await fetch(url);
-  if (!response.ok) throw new Error(`HTTP ${response.status}`);
-  const payload = await response.json();
-  if (payload.stat !== "OK") return { title: payload.title || "", rows: [] };
-  const rows = (payload.data || []).map((row) => ({ date: parseTwseDate(row[0]), open: parseNumber(row[3]), high: parseNumber(row[4]), low: parseNumber(row[5]), close: parseNumber(row[6]), volume: parseNumber(row[1]) ?? 0 })).filter((row) => row.date && [row.open, row.high, row.low, row.close].every(Number.isFinite));
-  return { title: payload.title || "", rows };
+  let lastError = null;
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      const response = await fetch(url, { cache: "no-store" });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const payload = await response.json();
+      if (payload.stat !== "OK") return { title: payload.title || "", rows: [] };
+      const rows = (payload.data || []).map((row) => ({ date: parseTwseDate(row[0]), open: parseNumber(row[3]), high: parseNumber(row[4]), low: parseNumber(row[5]), close: parseNumber(row[6]), volume: parseNumber(row[1]) ?? 0 })).filter((row) => row.date && [row.open, row.high, row.low, row.close].every(Number.isFinite));
+      return { title: payload.title || "", rows };
+    } catch (error) {
+      lastError = error;
+      if (attempt === 0) {
+        await new Promise((resolve) => window.setTimeout(resolve, 350));
+      }
+    }
+  }
+  throw lastError ?? new Error("Fetch failed");
 }
 async function fetchTwseStockData(code) {
   const results = await Promise.all(getRecentMonthKeysSince("2020-01-01").map((key) => fetchTwseMonth(code, key)));
@@ -900,8 +911,7 @@ async function ensureStockData(code, preferredName = "") {
     if (state.timeframe === "1d") setStatus(`已載入 ${result.code} ${preferredName || result.name} 的官方日 K 資料。`, "success");
     return true;
   } catch (error) {
-    if (preferredName) { upsertStock({ code, name: preferredName }); renderAll(); }
-    setStatus(`${code} 載入失敗：${error.message}`, "error");
+    setStatus(`${code} 載入失敗：官方資料暫時無法取得，請稍後再試。`, "error");
     return false;
   } finally {
     state.loadingCodes.delete(code);
@@ -1103,7 +1113,11 @@ stockForm.addEventListener("submit", async (event) => {
   const code = codeInput.value.trim();
   const name = nameInput.value.trim();
   if (!code) return setStatus("請先輸入股票代號。", "error");
-  upsertStock({ code, name: name || code }); codeInput.value = ""; nameInput.value = ""; renderAll(); await ensureStockData(code, name);
+  const ok = await ensureStockData(code, name);
+  if (ok) {
+    codeInput.value = "";
+    nameInput.value = "";
+  }
 });
 searchInput.addEventListener("input", renderWatchlist);
 watchlistFileInput.addEventListener("change", (event) => {
