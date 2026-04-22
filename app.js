@@ -346,7 +346,7 @@ function renderChart(stock) {
     drawText("尚未載入這支股票的 K 線資料", 60, 120, "#f5f6fa", 28);
     drawText("請匯入 `code,name,date,open,high,low,close,volume` 格式 CSV", 60, 160, "#97a0af", 18);
     state.chartLayout = null;
-    return { effectiveTimeframe, fallback, lastClose: null };
+    return { effectiveTimeframe, fallback, lastClose: null, summaryLine: "尚未載入資料" };
   }
   const computed = computeIndicator(candles);
   const macd = computeMacd(candles);
@@ -362,22 +362,27 @@ function renderChart(stock) {
   const prevClose = candles[candles.length - 2]?.close ?? lastCandle.close;
   const changeValue = lastCandle.close - prevClose;
   const changePct = prevClose === 0 ? 0 : ((lastCandle.close / prevClose) - 1) * 100;
+  const trendLabel = isGreenTrend ? "多頭" : "空頭";
+  const cciLabel = isUnderMa ? "藍在下" : "藍在上";
   const priceArea = { x: 42, y: 72, w: 890, h: 350 };
   const xAxisArea = { x: 42, y: 430, w: 890, h: 38 };
   const priceScaleArea = { x: 932, y: 72, w: 78, h: 350 };
-  const cciArea = { x: 42, y: 500, w: 968, h: 110 };
-  const macdArea = { x: 42, y: 640, w: 968, h: 110 };
-  const kdjArea = { x: 42, y: 780, w: 968, h: 100 };
+  const cciArea = { x: 42, y: 492, w: 968, h: 108 };
+  const kdjArea = { x: 42, y: 624, w: 968, h: 108 };
+  const macdArea = { x: 42, y: 756, w: 968, h: 108 };
+  const volumeArea = { x: 42, y: 888, w: 968, h: 110 };
   const infoArea = { x: 1040, y: 90, w: 250, h: 270 };
-  state.chartLayout = { priceArea, xAxisArea, priceScaleArea, cciArea, macdArea, kdjArea };
+  state.chartLayout = { priceArea, xAxisArea, priceScaleArea, cciArea, kdjArea, macdArea, volumeArea };
   drawRoundRect(xAxisArea.x, xAxisArea.y, xAxisArea.w, xAxisArea.h, 8, state.chartView.hoverZone === "xAxis" ? "rgba(247,200,67,0.08)" : "rgba(255,255,255,0.03)", state.chartView.hoverZone === "xAxis" ? "rgba(247,200,67,0.4)" : null);
   drawRoundRect(priceScaleArea.x, priceScaleArea.y, priceScaleArea.w, priceScaleArea.h, 8, state.chartView.hoverZone === "priceScale" ? "rgba(41,105,255,0.08)" : "rgba(255,255,255,0.03)", state.chartView.hoverZone === "priceScale" ? "rgba(41,105,255,0.45)" : null);
   drawText(`${stock.name} · ${timeframeLabels[effectiveTimeframe]} · TWSE`, 42, 42, "#f5f6fa", 24);
   drawText(`${stock.code}`, 360, 42, "#f7c843", 20);
   drawText(`${round(changeValue, 2)} (${round(changePct, 2)}%)`, 460, 42, changeValue >= 0 ? "#15d18d" : "#ff5263", 18);
+  drawText(`收盤:${round(lastCandle.close, 2)} | 漲跌:${round(changeValue, 2)} (${round(changePct, 2)}%) | 波段:${trendLabel} | CCI:${cciLabel} | 浮動:${livePnl == null ? "未持倉" : `${round(livePnl, 2)}%`}`, 42, 66, "#d7dee9", 14);
   drawRoundRect(cciArea.x, cciArea.y - 6, cciArea.w, cciArea.h + 12, 10, "rgba(255,255,255,0.015)", null);
-  drawRoundRect(macdArea.x, macdArea.y - 6, macdArea.w, macdArea.h + 12, 10, "rgba(255,255,255,0.015)", null);
   drawRoundRect(kdjArea.x, kdjArea.y - 6, kdjArea.w, kdjArea.h + 12, 10, "rgba(255,255,255,0.015)", null);
+  drawRoundRect(macdArea.x, macdArea.y - 6, macdArea.w, macdArea.h + 12, 10, "rgba(255,255,255,0.015)", null);
+  drawRoundRect(volumeArea.x, volumeArea.y - 6, volumeArea.w, volumeArea.h + 12, 10, "rgba(255,255,255,0.015)", null);
   const visibleCount = clamp(state.chartView.visibleCount, 20, Math.min(220, candles.length));
   state.chartView.visibleCount = visibleCount;
   const maxBarOffset = Math.max(0, candles.length - visibleCount);
@@ -395,6 +400,7 @@ function renderChart(stock) {
   const visibleK = kdj.k.slice(startIndex, endIndex);
   const visibleD = kdj.d.slice(startIndex, endIndex);
   const visibleJ = kdj.j.slice(startIndex, endIndex);
+  const visibleVolume = visible.map((c) => c.volume ?? 0);
   const rawMinPrice = Math.min(...visible.map((c) => c.low), ...visibleSt.filter((v) => v != null));
   const rawMaxPrice = Math.max(...visible.map((c) => c.high), ...visibleSt.filter((v) => v != null));
   const rawMidBase = (rawMinPrice + rawMaxPrice) / 2;
@@ -518,6 +524,29 @@ function renderChart(stock) {
     });
   });
   ctx.restore();
+  const kdjMin = Math.min(0, ...visibleK.filter((v) => v != null), ...visibleD.filter((v) => v != null), ...visibleJ.filter((v) => v != null));
+  const kdjMax = Math.max(100, ...visibleK.filter((v) => v != null), ...visibleD.filter((v) => v != null), ...visibleJ.filter((v) => v != null));
+  const mapKdjY = (v) => kdjArea.y + ((kdjMax - v) / (kdjMax - kdjMin || 1)) * kdjArea.h;
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(kdjArea.x, kdjArea.y, kdjArea.w, kdjArea.h);
+  ctx.clip();
+  [20, 50, 80].forEach((level) => {
+    const y = mapKdjY(level);
+    ctx.strokeStyle = "rgba(255,255,255,0.12)"; ctx.setLineDash([6, 6]); ctx.beginPath(); ctx.moveTo(kdjArea.x, y); ctx.lineTo(kdjArea.x + kdjArea.w, y); ctx.stroke(); ctx.setLineDash([]);
+  });
+  [visibleK, visibleD, visibleJ].forEach((series, idx) => {
+    const color = idx === 0 ? "#36b4ff" : idx === 1 ? "#f7c843" : "#ff5e67";
+    series.forEach((value, i) => {
+      if (value == null) return;
+      if (i > 0 && series[i - 1] != null) {
+        const prevX = kdjArea.x + (i - 1) * candleWidth + candleWidth / 2 + panX;
+        const x = kdjArea.x + i * candleWidth + candleWidth / 2 + panX;
+        ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(prevX, mapKdjY(series[i - 1])); ctx.lineTo(x, mapKdjY(value)); ctx.stroke();
+      }
+    });
+  });
+  ctx.restore();
   const macdMin = Math.min(-1, ...visibleMacdHist.filter((v) => v != null), ...visibleMacdDif.filter((v) => v != null), ...visibleMacdDea.filter((v) => v != null));
   const macdMax = Math.max(1, ...visibleMacdHist.filter((v) => v != null), ...visibleMacdDif.filter((v) => v != null), ...visibleMacdDea.filter((v) => v != null));
   const mapMacdY = (v) => macdArea.y + ((macdMax - v) / (macdMax - macdMin || 1)) * macdArea.h;
@@ -547,32 +576,31 @@ function renderChart(stock) {
     });
   });
   ctx.restore();
-  const kdjMin = Math.min(0, ...visibleK.filter((v) => v != null), ...visibleD.filter((v) => v != null), ...visibleJ.filter((v) => v != null));
-  const kdjMax = Math.max(100, ...visibleK.filter((v) => v != null), ...visibleD.filter((v) => v != null), ...visibleJ.filter((v) => v != null));
-  const mapKdjY = (v) => kdjArea.y + ((kdjMax - v) / (kdjMax - kdjMin || 1)) * kdjArea.h;
+  const volumeMax = Math.max(1, ...visibleVolume);
+  const mapVolumeY = (v) => volumeArea.y + volumeArea.h - (v / volumeMax) * volumeArea.h;
   ctx.save();
   ctx.beginPath();
-  ctx.rect(kdjArea.x, kdjArea.y, kdjArea.w, kdjArea.h);
+  ctx.rect(volumeArea.x, volumeArea.y, volumeArea.w, volumeArea.h);
   ctx.clip();
-  [20, 50, 80].forEach((level) => {
-    const y = mapKdjY(level);
-    ctx.strokeStyle = "rgba(255,255,255,0.12)"; ctx.setLineDash([6, 6]); ctx.beginPath(); ctx.moveTo(kdjArea.x, y); ctx.lineTo(kdjArea.x + kdjArea.w, y); ctx.stroke(); ctx.setLineDash([]);
-  });
-  [visibleK, visibleD, visibleJ].forEach((series, idx) => {
-    const color = idx === 0 ? "#36b4ff" : idx === 1 ? "#f7c843" : "#ff5e67";
-    series.forEach((value, i) => {
-      if (value == null) return;
-      if (i > 0 && series[i - 1] != null) {
-        const prevX = kdjArea.x + (i - 1) * candleWidth + candleWidth / 2 + panX;
-        const x = kdjArea.x + i * candleWidth + candleWidth / 2 + panX;
-        ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(prevX, mapKdjY(series[i - 1])); ctx.lineTo(x, mapKdjY(value)); ctx.stroke();
-      }
-    });
+  ctx.strokeStyle = "rgba(255,255,255,0.12)";
+  for (let i = 0; i <= 2; i += 1) {
+    const y = volumeArea.y + (volumeArea.h / 2) * i;
+    ctx.beginPath();
+    ctx.moveTo(volumeArea.x, y);
+    ctx.lineTo(volumeArea.x + volumeArea.w, y);
+    ctx.stroke();
+  }
+  visible.forEach((candle, i) => {
+    const x = volumeArea.x + i * candleWidth + candleWidth / 2 + panX;
+    const y = mapVolumeY(candle.volume ?? 0);
+    ctx.fillStyle = candle.close >= candle.open ? "rgba(255,59,48,0.8)" : "rgba(0,200,83,0.8)";
+    ctx.fillRect(x - candleWidth * 0.32, y, candleWidth * 0.64, volumeArea.y + volumeArea.h - y);
   });
   ctx.restore();
   drawText("CCI", cciArea.x, cciArea.y - 12, "#97a0af", 14);
+  drawText("KD", kdjArea.x, kdjArea.y - 12, "#97a0af", 14);
   drawText("MACD", macdArea.x, macdArea.y - 12, "#97a0af", 14);
-  drawText("KDJ", kdjArea.x, kdjArea.y - 12, "#97a0af", 14);
+  drawText("成交量", volumeArea.x, volumeArea.y - 12, "#97a0af", 14);
   if (state.chartView.hoverX != null) {
     const lineLeft = priceArea.x;
     const lineRight = xAxisArea.x + xAxisArea.w;
@@ -581,7 +609,7 @@ function renderChart(stock) {
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(lineX, priceArea.y);
-    ctx.lineTo(lineX, kdjArea.y + kdjArea.h);
+    ctx.lineTo(lineX, volumeArea.y + volumeArea.h);
     ctx.stroke();
   }
   drawRoundRect(infoArea.x, infoArea.y, infoArea.w, infoArea.h, 14, "rgba(19,22,30,0.95)", "#2a3040");
@@ -606,7 +634,12 @@ function renderChart(stock) {
   drawText(rightDate, xAxisArea.x + xAxisArea.w - 4, xAxisArea.y + 24, "#97a0af", 12, "right");
   drawText("時間軸: 滾輪縮放", xAxisArea.x + 10, xAxisArea.y + 12, state.chartView.hoverZone === "xAxis" ? "#ffe27a" : "rgba(151,160,175,0.85)", 11);
   drawText("價格軸: 滾輪縮放", priceScaleArea.x + priceScaleArea.w - 6, priceScaleArea.y + priceScaleArea.h + 16, state.chartView.hoverZone === "priceScale" ? "#7ab5ff" : "rgba(151,160,175,0.85)", 11, "right");
-  return { effectiveTimeframe, fallback, lastClose: lastCandle.close };
+  return {
+    effectiveTimeframe,
+    fallback,
+    lastClose: lastCandle.close,
+    summaryLine: `收盤:${round(lastCandle.close, 2)} | 漲跌:${round(changeValue, 2)} (${round(changePct, 2)}%) | 波段:${trendLabel} | CCI:${cciLabel} | 浮動:${livePnl == null ? "未持倉" : `${round(livePnl, 2)}%`}`,
+  };
 }
 function renderWatchlist() {
   const keyword = searchInput.value.trim().toLowerCase();
@@ -630,7 +663,7 @@ function renderAll() {
   renderWatchlist();
   const chartResult = renderChart(stock);
   chartTitle.textContent = `${stock.code} ${stock.name}`;
-  closeInfo.textContent = `今日收盤價：${chartResult.lastClose != null ? round(chartResult.lastClose, 2) : "--"}`;
+  closeInfo.textContent = chartResult.summaryLine || `今日收盤價：${chartResult.lastClose != null ? round(chartResult.lastClose, 2) : "--"}`;
   if (chartResult.fallback && state.timeframe !== "1d") {
     setStatus(`目前官方 TWSE 資料只有日 K，${stock.code} 已自動改用 1日顯示。`, "error");
   }
@@ -806,7 +839,7 @@ function updateHoverCrosshair(point) {
   const left = layout.priceArea.x;
   const right = layout.xAxisArea.x + layout.xAxisArea.w;
   const top = layout.priceArea.y;
-  const bottom = layout.kdjArea.y + layout.kdjArea.h;
+  const bottom = layout.volumeArea.y + layout.volumeArea.h;
   if (point.x >= left && point.x <= right && point.y >= top && point.y <= bottom) {
     state.chartView.hoverX = point.x;
   } else {
