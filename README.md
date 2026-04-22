@@ -1,31 +1,23 @@
 # Stock_K-chat
 
-這是一個可直接部署到 GitHub Pages 的靜態股票觀察面板。
+GitHub Pages 靜態股票觀察面板。
 
-本地使用時，直接開啟 `index.html` 即可。
+網站：
+- [https://fricachai.github.io/Stock_K-chat/](https://fricachai.github.io/Stock_K-chat/)
 
-## GitHub Pages 部署
-
-這個 repo 已加入 GitHub Pages workflow。
-
-在 GitHub 倉庫中請確認：
-
-1. 進入 `Settings` -> `Pages`
-2. `Source` 選擇 `GitHub Actions`
-3. push 到 `main` 後，GitHub Actions 會自動部署
-
-部署完成後，網址通常會是：
-
-`https://fricachai.github.io/Stock_K-chat/`
+主要檔案：
+- [index.html](/D:/USB_Data/個人研究/實用分析分類/ChatGPT_個人累積/ChatGPT_Codex_專案資料夾/股票交易策略/Stock_K-chat/index.html)
+- [styles.css](/D:/USB_Data/個人研究/實用分析分類/ChatGPT_個人累積/ChatGPT_Codex_專案資料夾/股票交易策略/Stock_K-chat/styles.css)
+- [app.js](/D:/USB_Data/個人研究/實用分析分類/ChatGPT_個人累積/ChatGPT_Codex_專案資料夾/股票交易策略/Stock_K-chat/app.js)
 
 ## 功能
 
-- 左側顯示深色 K 線主圖、Supertrend、買賣訊號標籤、CCI 線與持倉浮動獲利區。
-- 右側提供股票觀察清單，可只輸入股票代號，自動抓取股票名稱。
-- 會向 TWSE 官方端點抓取最近數月的日 K 資料並更新圖表。
-- 支援匯入觀察清單 CSV。
-- 支援匯入 K 線 CSV，點選右側股票後切換左側圖表。
-- 內建示範資料，可先直接看到完整畫面。
+- 左側 K 線主圖
+- 下方副圖：`CCI / KD / MACD / 成交量`
+- 右側觀察清單
+- 匯入觀察清單 CSV
+- 匯入 K 線 CSV
+- 以 TWSE 官方日 K 為主
 
 ## CSV 格式
 
@@ -37,7 +29,7 @@ code,name
 2317,鴻海
 ```
 
-也可只放代號：
+或：
 
 ```csv
 code
@@ -45,7 +37,7 @@ code
 2317
 ```
 
-K 線資料：
+K 線：
 
 ```csv
 code,name,date,open,high,low,close,volume
@@ -53,8 +45,55 @@ code,name,date,open,high,low,close,volume
 2330,台積電,2026-04-01T13:00:00,916,921,910,919,10211
 ```
 
+## GitHub Pages 部署
+
+1. GitHub repo 進入 `Settings` -> `Pages`
+2. `Source` 選 `GitHub Actions`
+3. push 到 `main` 後自動部署
+
+## Cloudflare Worker Proxy
+
+GitHub Pages 前端直接抓 TWSE 官方 API，常會遇到：
+
+- `Failed to fetch`
+- 某些代號載入失敗
+- 瀏覽器跨站限制
+
+專案已提供 Worker 範本：
+
+- [cloudflare-worker.js](/D:/USB_Data/個人研究/實用分析分類/ChatGPT_個人累積/ChatGPT_Codex_專案資料夾/股票交易策略/Stock_K-chat/cloudflare-worker.js)
+
+### 部署步驟
+
+1. 到 Cloudflare Workers 建立一個 Worker
+2. 把 `cloudflare-worker.js` 內容貼上
+3. 部署後取得網址，例如：
+
+```text
+https://your-worker.your-subdomain.workers.dev
+```
+
+4. 打開 [index.html](/D:/USB_Data/個人研究/實用分析分類/ChatGPT_個人累積/ChatGPT_Codex_專案資料夾/股票交易策略/Stock_K-chat/index.html)
+5. 把頁首這段設定改成你的 Worker 網址：
+
+```html
+<script>
+  window.APP_CONFIG = {
+    twseProxyBase: "https://your-worker.your-subdomain.workers.dev",
+  };
+</script>
+```
+
+設定後，前端會優先呼叫：
+
+```text
+https://your-worker.your-subdomain.workers.dev/api/twse-stock-day?date=YYYYMM01&stockNo=2330
+```
+
+而不是瀏覽器直接打 TWSE。
+
 ## 備註
 
-- 目前版本使用前端本地運算，已將你提供的 Pine Script 核心判斷轉寫成 JavaScript。
-- 自動抓取目前接的是 TWSE 官方日成交資料，因此圖表是日 K，不是 4 小時 K。
-- 若要接即時資料、4H K 或上櫃股票來源，可以在這個基礎上再往下串接。
+- 日線優先使用 TWSE 官方資料
+- 小時級資料仍以你匯入的 CSV 或聚合資料為主
+- 如果 proxy 沒設定，前端會退回直連 TWSE

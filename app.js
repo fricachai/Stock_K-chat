@@ -21,6 +21,8 @@ const priceFileInput = document.getElementById("priceFileInput");
 const timeframeSelect = document.getElementById("timeframeSelect");
 const authorCard = document.querySelector(".author-card");
 const authorBubbles = [...document.querySelectorAll(".author-bubble")];
+const APP_CONFIG = window.APP_CONFIG || {};
+const TWSE_PROXY_BASE = typeof APP_CONFIG.twseProxyBase === "string" ? APP_CONFIG.twseProxyBase.trim().replace(/\/+$/, "") : "";
 
 const settings = {
   st_period: 6,
@@ -870,7 +872,10 @@ function extractNameFromTitle(title, code) {
   return afterCode.split(" ").find(Boolean) || code;
 }
 async function fetchTwseMonth(code, dateKey) {
-  const url = `https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=${dateKey}&stockNo=${encodeURIComponent(code)}`;
+  const directUrl = `https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=${dateKey}&stockNo=${encodeURIComponent(code)}`;
+  const url = TWSE_PROXY_BASE
+    ? `${TWSE_PROXY_BASE}/api/twse-stock-day?date=${dateKey}&stockNo=${encodeURIComponent(code)}`
+    : directUrl;
   let lastError = null;
   for (let attempt = 0; attempt < 2; attempt += 1) {
     try {
@@ -911,7 +916,8 @@ async function ensureStockData(code, preferredName = "") {
     if (state.timeframe === "1d") setStatus(`已載入 ${result.code} ${preferredName || result.name} 的官方日 K 資料。`, "success");
     return true;
   } catch (error) {
-    setStatus(`${code} 載入失敗：官方資料暫時無法取得，請稍後再試。`, "error");
+    const suffix = TWSE_PROXY_BASE ? "proxy 或官方資料暫時無法取得" : "官方資料暫時無法取得，建議設定 proxy";
+    setStatus(`${code} 載入失敗：${suffix}。`, "error");
     return false;
   } finally {
     state.loadingCodes.delete(code);
