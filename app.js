@@ -118,7 +118,7 @@ function moveStockBefore(dragCode, targetCode) {
   saveWatchlistState();
 }
 function getDefaultVisibleCount(timeframe, candleCount = 0) {
-  if (timeframe === "1d") return clamp(candleCount || 240, 20, 260);
+  if (timeframe === "1d") return clamp(Math.min(candleCount || 33, 33), 20, 260);
   return 36;
 }
 function resetChartView(code = state.selectedCode) {
