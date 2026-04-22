@@ -101,6 +101,14 @@ function formatCompactVolume(value) {
   if (Math.abs(value) >= 10000) return `${round(value / 10000, 2)}萬`;
   return `${Math.round(value)}`;
 }
+function drawValueTag(x, y, text, bg = "rgba(101, 112, 145, 0.95)", color = "#f3f6ff", minWidth = 58) {
+  ctx.font = `12px "Segoe UI", "Noto Sans TC", sans-serif`;
+  const paddingX = 10;
+  const width = Math.max(minWidth, ctx.measureText(text).width + paddingX * 2);
+  drawRoundRect(x, y - 12, width, 24, 10, bg, null);
+  drawText(text, x + width / 2, y + 5, color, 12, "center");
+  return width;
+}
 function getAuthorBorderPoint(width, height) {
   const margin = 10;
   const side = Math.floor(Math.random() * 4);
@@ -373,7 +381,7 @@ function renderChart(stock) {
   const changePct = prevClose === 0 ? 0 : ((lastCandle.close / prevClose) - 1) * 100;
   const holdingState = computed.buySignals.length > computed.sellSignals.length ? "持有中" : "未持倉";
   const cciLabel = isUnderMa ? "藍在下" : "藍在上";
-  const cumulativePnl = computed.sellSignals.reduce((sum, signal) => sum + (Number.isFinite(signal.pnl) ? signal.pnl : 0), 0);
+  const cumulativePnl = lastBuyPrice == null ? null : ((lastCandle.close - lastBuyPrice) / lastBuyPrice) * 100;
   const priceArea = { x: 46, y: 46, w: 1168, h: 392 };
   const xAxisArea = { x: 46, y: 446, w: 1168, h: 38 };
   const priceScaleArea = { x: 1214, y: 46, w: 64, h: 392 };
@@ -502,43 +510,31 @@ function renderChart(stock) {
     const x = priceArea.x + localIndex * candleWidth + candleWidth / 2 + panX;
     const y = mapPriceY(signal.price);
     const isBuy = !Object.prototype.hasOwnProperty.call(signal, "pnl");
-    const bg = isBuy ? "#ffe44c" : signal.pnl >= 0 ? "#ff9811" : "#ff5252";
-    const fg = isBuy ? "#111317" : "#ffffff";
-    const pnlText = signal.pnl == null ? "-" : `${round(signal.pnl, 2)}%`;
-    const label = isBuy ? `買點\n${signal.reason}\n價:${round(signal.price, 2)}` : `賣點 (${signal.reason})\n價:${round(signal.price, 2)}\n獲利:${pnlText}`;
-    const lines = label.split("\n");
-    const boxW = 124;
-    const boxH = 24 + lines.length * 16;
-    const desiredBoxY = isBuy ? y + 96 : y - boxH - 96;
+    const bg = "rgba(255, 152, 17, 0.96)";
+    const fg = "#26190c";
+    const dateText = formatDate(visible[localIndex].date).slice(5);
+    const metricText = isBuy ? `價 ${round(signal.price, 2)}` : `${signal.pnl == null ? "-" : `${round(signal.pnl, 2)}%`}`;
+    const label = `${dateText} ${isBuy ? "買點" : "賣點"} ${metricText}`;
+    ctx.font = `12px "Segoe UI", "Noto Sans TC", sans-serif`;
+    const boxW = Math.max(116, ctx.measureText(label).width + 22);
+    const boxH = 28;
+    const desiredBoxY = isBuy ? y + 82 : y - boxH - 82;
     const boxY = desiredBoxY;
     const boxX = clamp(x - boxW / 2, priceArea.x + 8, priceArea.x + priceArea.w - boxW - 8);
-    labelCallouts.push({ boxX, boxY, boxW, boxH, lines, fg, bg, targetX: x, targetY: y, isBuy });
+    labelCallouts.push({ boxX, boxY, boxW, boxH, label, fg, bg, targetX: x, targetY: y, isBuy });
   });
   labelCallouts.forEach((callout) => {
     const anchorX = clamp(callout.targetX, callout.boxX + 18, callout.boxX + callout.boxW - 18);
     const startY = callout.isBuy ? callout.boxY : callout.boxY + callout.boxH;
-    const endY = callout.isBuy ? callout.targetY + 30 : callout.targetY - 30;
+    const endY = callout.isBuy ? callout.targetY + 18 : callout.targetY - 18;
     ctx.strokeStyle = callout.bg;
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 1.2;
     ctx.beginPath();
     ctx.moveTo(anchorX, startY);
     ctx.lineTo(anchorX, endY);
     ctx.stroke();
-    ctx.fillStyle = callout.bg;
-    ctx.beginPath();
-    if (callout.isBuy) {
-      ctx.moveTo(anchorX, callout.targetY + 18);
-      ctx.lineTo(anchorX - 6, callout.targetY + 30);
-      ctx.lineTo(anchorX + 6, callout.targetY + 30);
-    } else {
-      ctx.moveTo(anchorX, callout.targetY - 18);
-      ctx.lineTo(anchorX - 6, callout.targetY - 30);
-      ctx.lineTo(anchorX + 6, callout.targetY - 30);
-    }
-    ctx.closePath();
-    ctx.fill();
-    drawRoundRect(callout.boxX, callout.boxY, callout.boxW, callout.boxH, 8, callout.bg, null);
-    callout.lines.forEach((line, idx) => drawText(line, callout.boxX + callout.boxW / 2, callout.boxY + 18 + idx * 16, callout.fg, 12, "center"));
+    drawRoundRect(callout.boxX, callout.boxY, callout.boxW, callout.boxH, 14, callout.bg, null);
+    drawText(callout.label, callout.boxX + callout.boxW / 2, callout.boxY + 19, callout.fg, 12, "center");
   });
   ctx.restore();
   drawText("SMA5", priceArea.x + 10, priceArea.y + 18, "#62c8ff", 12);
@@ -587,7 +583,14 @@ function renderChart(stock) {
   ctx.clip();
   [20, 50, 80].forEach((level) => {
     const y = mapKdjY(level);
-    ctx.strokeStyle = "rgba(255,255,255,0.12)"; ctx.setLineDash([6, 6]); ctx.beginPath(); ctx.moveTo(kdjArea.x, y); ctx.lineTo(kdjArea.x + kdjArea.w, y); ctx.stroke(); ctx.setLineDash([]);
+    ctx.strokeStyle = level === 50 ? "rgba(255,255,255,0.16)" : "rgba(255,255,255,0.42)";
+    ctx.lineWidth = level === 50 ? 1 : 1.35;
+    ctx.setLineDash(level === 50 ? [5, 7] : [8, 6]);
+    ctx.beginPath();
+    ctx.moveTo(kdjArea.x, y);
+    ctx.lineTo(kdjArea.x + kdjArea.w, y);
+    ctx.stroke();
+    ctx.setLineDash([]);
   });
   [visibleK, visibleD].forEach((series, idx) => {
     const color = idx === 0 ? "#36b4ff" : "#f7c843";
@@ -687,26 +690,26 @@ function renderChart(stock) {
     ctx.setLineDash([]);
 
     const priceTag = (round(hoveredCandle.close, 2) ?? hoveredCandle.close).toFixed(2);
-    drawRoundRect(priceScaleArea.x + 4, closeY - 12, priceScaleArea.w - 8, 24, 10, "rgba(101, 112, 145, 0.95)", null);
-    drawText(priceTag, priceScaleArea.x + priceScaleArea.w / 2, closeY + 5, "#f3f6ff", 12, "center");
+    drawValueTag(priceScaleArea.x + 4, closeY, priceTag);
 
     const xTagText = formatDate(hoveredCandle.date);
-    const tagW = 94;
-    const tagX = clamp(lineX - tagW / 2, xAxisArea.x + 4, xAxisArea.x + xAxisArea.w - tagW - 4);
-    drawRoundRect(tagX, xAxisArea.y + 6, tagW, 24, 10, "rgba(95,108,160,0.92)", null);
-    drawText(xTagText, tagX + tagW / 2, xAxisArea.y + 22, "#f3f6ff", 12, "center");
+    const tagX = clamp(lineX - 52, xAxisArea.x + 4, xAxisArea.x + xAxisArea.w - 108);
+    drawValueTag(tagX, xAxisArea.y + 18, xTagText, "rgba(95,108,160,0.92)", "#f3f6ff", 104);
+
+    drawValueTag(cciArea.x + cciArea.w - 58, mapCciY(infoCci ?? 0), `${round(infoCci ?? 0, 2)}`, "rgba(45,115,255,0.96)");
+    drawValueTag(cciArea.x + cciArea.w - 126, mapCciY(infoCciMa ?? 0), `${round(infoCciMa ?? 0, 2)}`, "rgba(247,200,67,0.96)", "#111317");
+    drawValueTag(kdjArea.x + kdjArea.w - 58, mapKdjY(infoK ?? 0), `${round(infoK ?? 0, 2)}`, "rgba(54,180,255,0.96)");
+    drawValueTag(kdjArea.x + kdjArea.w - 126, mapKdjY(infoD ?? 0), `${round(infoD ?? 0, 2)}`, "rgba(247,200,67,0.96)", "#111317");
+    drawValueTag(macdArea.x + macdArea.w - 58, mapMacdY(infoDif ?? 0), `${round(infoDif ?? 0, 2)}`, "rgba(45,115,255,0.96)");
+    drawValueTag(macdArea.x + macdArea.w - 126, mapMacdY(infoDea ?? 0), `${round(infoDea ?? 0, 2)}`, "rgba(255,159,26,0.96)", "#111317");
+    drawValueTag(volumeArea.x + volumeArea.w - 82, mapVolumeY(infoVolume), formatCompactVolume(infoVolume), "rgba(115,125,160,0.96)", "#f3f6ff", 78);
   }
-  const leftDate = formatDate(visible[0].date);
-  const midDate = formatDate(visible[Math.floor((visible.length - 1) / 2)].date);
-  const rightDate = formatDate(visible[visible.length - 1].date);
-  drawText(leftDate, xAxisArea.x + 4, xAxisArea.y + 24, "#97a0af", 12);
-  drawText(midDate, xAxisArea.x + xAxisArea.w / 2, xAxisArea.y + 24, "#97a0af", 12, "center");
-  drawText(rightDate, xAxisArea.x + xAxisArea.w - 4, xAxisArea.y + 24, "#97a0af", 12, "right");
   return {
     effectiveTimeframe,
     fallback,
     lastClose: lastCandle.close,
-    summaryLine: `收盤價：${round(lastCandle.close, 2)} | ${round(changeValue, 2)} (${round(changePct, 2)}%) | 買點：藍線下往上穿黃線 | 賣點：藍線上往下穿黃線 | ${holdingState} | 累計損益 ${round(cumulativePnl, 2)}% | CCI：${cciLabel}`,
+    summaryPrefix: `收盤價：${round(lastCandle.close, 2)} | ${round(changeValue, 2)} (${round(changePct, 2)}%) | 買點：藍線下往上穿黃線 | 賣點：藍線上往下穿黃線`,
+    summaryHighlight: `${holdingState} | 累計損益 ${cumulativePnl == null ? "--" : `${round(cumulativePnl, 2)}%`} | CCI：${cciLabel}`,
   };
 }
 function renderWatchlist() {
@@ -731,7 +734,9 @@ function renderAll() {
   renderWatchlist();
   const chartResult = renderChart(stock);
   chartTitle.textContent = `${stock.code} ${stock.name}`;
-  closeInfo.textContent = chartResult.summaryLine || `今日收盤價：${chartResult.lastClose != null ? round(chartResult.lastClose, 2) : "--"}`;
+  closeInfo.innerHTML = chartResult.summaryPrefix
+    ? `${chartResult.summaryPrefix} <span class="close-info-highlight">${chartResult.summaryHighlight}</span>`
+    : `今日收盤價：${chartResult.lastClose != null ? round(chartResult.lastClose, 2) : "--"}`;
   if (chartResult.fallback && state.timeframe !== "1d") {
     setStatus(`目前官方 TWSE 資料只有日 K，${stock.code} 已自動改用 1日顯示。`, "error");
   }
@@ -750,10 +755,13 @@ function parseCsv(text) {
     return Object.fromEntries(header.map((key, index) => [key, values[index] ?? ""]));
   });
 }
-function getRecentMonthKeys(count = 36) {
+function getRecentMonthKeysSince(startDateString = "2020-01-01") {
   const keys = [];
-  const cursor = new Date(); cursor.setDate(1);
-  for (let i = 0; i < count; i += 1) {
+  const cursor = new Date();
+  cursor.setDate(1);
+  const start = new Date(startDateString);
+  start.setDate(1);
+  while (cursor >= start) {
     keys.push(`${cursor.getFullYear()}${String(cursor.getMonth() + 1).padStart(2, "0")}01`);
     cursor.setMonth(cursor.getMonth() - 1);
   }
@@ -786,7 +794,7 @@ async function fetchTwseMonth(code, dateKey) {
   return { title: payload.title || "", rows };
 }
 async function fetchTwseStockData(code) {
-  const results = await Promise.all(getRecentMonthKeys(36).map((key) => fetchTwseMonth(code, key)));
+  const results = await Promise.all(getRecentMonthKeysSince("2020-01-01").map((key) => fetchTwseMonth(code, key)));
   const nameSource = results.find((item) => item.title)?.title || "";
   const candles = results.flatMap((item) => item.rows).sort((a, b) => new Date(a.date) - new Date(b.date));
   const deduped = candles.filter((candle, index, array) => index === 0 || candle.date !== array[index - 1].date);
@@ -853,7 +861,7 @@ function generateDemoCandles(code, name, seed, startPrice) {
   const rand = seededRandom(seed);
   const candles = [];
   let price = startPrice;
-  const startDate = new Date("2025-05-01T00:00:00");
+  const startDate = new Date("2020-01-01T00:00:00");
   const endDate = new Date();
   endDate.setHours(0, 0, 0, 0);
   let index = 0;
@@ -883,7 +891,7 @@ function loadDemoData() {
   state.selectedCode = "2330";
   resetChartView("2330");
   renderAll();
-  setStatus("官方資料載入失敗，已改用從 2025-05-01 開始的示範日 K 資料。", "success");
+  setStatus("官方資料載入失敗，已改用從 2020-01-01 開始的示範日 K 資料。", "success");
 }
 function getCanvasPoint(event) {
   const rect = canvas.getBoundingClientRect();

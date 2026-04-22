@@ -451,6 +451,11 @@ h1 {
   line-height: 1.5;
 }
 
+.close-info-highlight {
+  color: #ffe36a;
+  font-weight: 700;
+}
+
 h2 {
   font-size: 24px;
   font-weight: 700;
