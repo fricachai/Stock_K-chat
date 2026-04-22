@@ -315,6 +315,35 @@ function formatDate(dateStr) {
   if (Number.isNaN(d.getTime())) return dateStr;
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
+function formatMonthAxisDate(dateStr) {
+  const d = new Date(dateStr);
+  if (Number.isNaN(d.getTime())) return dateStr;
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+function getAxisLabelIndices(candles) {
+  const groups = new Map();
+  candles.forEach((candle, index) => {
+    const d = new Date(candle.date);
+    const key = `${d.getFullYear()}-${d.getMonth()}`;
+    const list = groups.get(key) ?? [];
+    list.push({ index, day: d.getDate(), date: candle.date });
+    groups.set(key, list);
+  });
+  const picked = [];
+  for (const list of groups.values()) {
+    if (!list.length) continue;
+    picked.push(list[0].index);
+    let mid = list.find((item) => item.day >= 13 && item.day <= 17);
+    if (!mid) {
+      mid = list.reduce((best, item) => {
+        if (!best) return item;
+        return Math.abs(item.day - 15) < Math.abs(best.day - 15) ? item : best;
+      }, null);
+    }
+    if (mid && mid.index !== list[0].index) picked.push(mid.index);
+  }
+  return picked.sort((a, b) => a - b);
+}
 function getNativeIntervalHours(candles) {
   if (candles.length < 2) return 24;
   let minDiff = Number.POSITIVE_INFINITY;
@@ -523,7 +552,30 @@ function renderChart(stock) {
     const boxX = clamp(x - boxW / 2, priceArea.x + 8, priceArea.x + priceArea.w - boxW - 8);
     labelCallouts.push({ boxX, boxY, boxW, boxH, label, fg, bg, targetX: x, targetY: y, isBuy });
   });
-  labelCallouts.forEach((callout) => {
+  const occupiedBoxes = [];
+  labelCallouts
+    .sort((a, b) => (a.isBuy === b.isBuy ? a.targetX - b.targetX : a.isBuy ? 1 : -1))
+    .forEach((callout) => {
+    const direction = callout.isBuy ? 1 : -1;
+    let adjustedY = callout.boxY;
+    for (let attempts = 0; attempts < 8; attempts += 1) {
+      const overlaps = occupiedBoxes.some((box) => !(
+        callout.boxX + callout.boxW < box.x ||
+        callout.boxX > box.x + box.w ||
+        adjustedY + callout.boxH < box.y ||
+        adjustedY > box.y + box.h
+      ));
+      if (!overlaps) break;
+      adjustedY += direction * 34;
+    }
+    if (callout.isBuy) {
+      adjustedY = Math.min(adjustedY, priceArea.y + priceArea.h - callout.boxH - 10);
+    } else {
+      adjustedY = Math.max(adjustedY, priceArea.y + 10);
+    }
+    callout.boxY = adjustedY;
+    occupiedBoxes.push({ x: callout.boxX, y: callout.boxY, w: callout.boxW, h: callout.boxH });
+
     const anchorX = clamp(callout.targetX, callout.boxX + 18, callout.boxX + callout.boxW - 18);
     const startY = callout.isBuy ? callout.boxY : callout.boxY + callout.boxH;
     const endY = callout.isBuy ? callout.targetY + 18 : callout.targetY - 18;
@@ -704,6 +756,14 @@ function renderChart(stock) {
     drawValueTag(macdArea.x + macdArea.w - 126, mapMacdY(infoDea ?? 0), `${round(infoDea ?? 0, 2)}`, "rgba(255,159,26,0.96)", "#111317");
     drawValueTag(volumeArea.x + volumeArea.w - 82, mapVolumeY(infoVolume), formatCompactVolume(infoVolume), "rgba(115,125,160,0.96)", "#f3f6ff", 78);
   }
+  const axisIndices = getAxisLabelIndices(visible);
+  axisIndices.forEach((idx) => {
+    const candle = visible[idx];
+    const x = xAxisArea.x + idx * candleWidth + candleWidth / 2 + panX;
+    if (x < xAxisArea.x + 28 || x > xAxisArea.x + xAxisArea.w - 28) return;
+    drawText(formatMonthAxisDate(candle.date), x, xAxisArea.y + 24, "#97a0af", 12, "center");
+  });
+
   return {
     effectiveTimeframe,
     fallback,
