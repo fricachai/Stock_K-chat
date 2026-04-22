@@ -44,7 +44,7 @@ const state = {
   rawCandlesByCode: new Map(),
   selectedCode: null,
   loadingCodes: new Set(),
-  chartView: { visibleCount: 36, priceScale: 1, hoverZone: "", hoverX: null, barOffset: 0, panX: 0, panY: 0 },
+  chartView: { visibleCount: 36, priceScale: 1, hoverZone: "", hoverX: null, hoverIndex: null, barOffset: 0, panX: 0, panY: 0 },
   chartLayout: null,
   timeframe: "1d",
   dragState: null,
@@ -95,6 +95,11 @@ function round(value, digits = 2) {
   if (!Number.isFinite(value)) return null;
   const factor = 10 ** digits;
   return Math.round(value * factor) / factor;
+}
+function formatCompactVolume(value) {
+  if (!Number.isFinite(value)) return "--";
+  if (Math.abs(value) >= 10000) return `${round(value / 10000, 2)}萬`;
+  return `${Math.round(value)}`;
 }
 function getAuthorBorderPoint(width, height) {
   const margin = 10;
@@ -399,7 +404,6 @@ function renderChart(stock) {
   const visibleMacdDea = macd.dea.slice(startIndex, endIndex);
   const visibleK = kdj.k.slice(startIndex, endIndex);
   const visibleD = kdj.d.slice(startIndex, endIndex);
-  const visibleJ = kdj.j.slice(startIndex, endIndex);
   const visibleSma5 = sma5.slice(startIndex, endIndex);
   const visibleSma20 = sma20.slice(startIndex, endIndex);
   const visibleSma60 = sma60.slice(startIndex, endIndex);
@@ -442,6 +446,20 @@ function renderChart(stock) {
   ctx.beginPath(); ctx.moveTo(priceScaleArea.x, priceArea.y); ctx.lineTo(priceScaleArea.x, priceArea.y + priceArea.h); ctx.stroke();
   const candleWidth = priceArea.w / visible.length;
   const panX = state.chartView.panX;
+  const leftBound = priceArea.x + panX;
+  const rightBound = priceArea.x + priceArea.w + panX;
+  let hoverLocalIndex = null;
+  let hoverCandleX = null;
+  let hoveredCandle = null;
+  if (state.chartView.hoverX != null && state.chartView.hoverX >= leftBound && state.chartView.hoverX <= rightBound) {
+    const rawIndex = Math.round((state.chartView.hoverX - priceArea.x - panX - candleWidth / 2) / candleWidth);
+    hoverLocalIndex = clamp(rawIndex, 0, visible.length - 1);
+    hoverCandleX = priceArea.x + hoverLocalIndex * candleWidth + candleWidth / 2 + panX;
+    hoveredCandle = visible[hoverLocalIndex];
+    state.chartView.hoverIndex = offset + hoverLocalIndex;
+  } else {
+    state.chartView.hoverIndex = null;
+  }
   const labelCallouts = [];
   ctx.save();
   ctx.beginPath();
@@ -560,8 +578,8 @@ function renderChart(stock) {
     });
   });
   ctx.restore();
-  const kdjMin = Math.min(0, ...visibleK.filter((v) => v != null), ...visibleD.filter((v) => v != null), ...visibleJ.filter((v) => v != null));
-  const kdjMax = Math.max(100, ...visibleK.filter((v) => v != null), ...visibleD.filter((v) => v != null), ...visibleJ.filter((v) => v != null));
+  const kdjMin = Math.min(0, ...visibleK.filter((v) => v != null), ...visibleD.filter((v) => v != null));
+  const kdjMax = Math.max(100, ...visibleK.filter((v) => v != null), ...visibleD.filter((v) => v != null));
   const mapKdjY = (v) => kdjArea.y + ((kdjMax - v) / (kdjMax - kdjMin || 1)) * kdjArea.h;
   ctx.save();
   ctx.beginPath();
@@ -571,8 +589,8 @@ function renderChart(stock) {
     const y = mapKdjY(level);
     ctx.strokeStyle = "rgba(255,255,255,0.12)"; ctx.setLineDash([6, 6]); ctx.beginPath(); ctx.moveTo(kdjArea.x, y); ctx.lineTo(kdjArea.x + kdjArea.w, y); ctx.stroke(); ctx.setLineDash([]);
   });
-  [visibleK, visibleD, visibleJ].forEach((series, idx) => {
-    const color = idx === 0 ? "#36b4ff" : idx === 1 ? "#f7c843" : "#ff5e67";
+  [visibleK, visibleD].forEach((series, idx) => {
+    const color = idx === 0 ? "#36b4ff" : "#f7c843";
     series.forEach((value, i) => {
       if (value == null) return;
       if (i > 0 && series[i - 1] != null) {
@@ -633,20 +651,50 @@ function renderChart(stock) {
     ctx.fillRect(x - candleWidth * 0.32, y, candleWidth * 0.64, volumeArea.y + volumeArea.h - y);
   });
   ctx.restore();
-  drawText("CCI", cciArea.x, cciArea.y - 12, "#97a0af", 14);
-  drawText("KD", kdjArea.x, kdjArea.y - 12, "#97a0af", 14);
-  drawText("MACD", macdArea.x, macdArea.y - 12, "#97a0af", 14);
-  drawText("成交量", volumeArea.x, volumeArea.y - 12, "#97a0af", 14);
-  if (state.chartView.hoverX != null) {
+  const infoIndex = hoverLocalIndex ?? (visible.length - 1);
+  const infoCci = visibleCci[infoIndex];
+  const infoCciMa = visibleCciMa[infoIndex];
+  const infoK = visibleK[infoIndex];
+  const infoD = visibleD[infoIndex];
+  const infoDif = visibleMacdDif[infoIndex];
+  const infoDea = visibleMacdDea[infoIndex];
+  const infoHist = visibleMacdHist[infoIndex];
+  const infoVolume = visibleVolume[infoIndex];
+  drawText(`CCI ${round(infoCci ?? 0, 2)} MA ${round(infoCciMa ?? 0, 2)}`, cciArea.x, cciArea.y - 12, "#97a0af", 14);
+  drawText(`KD K ${round(infoK ?? 0, 2)} D ${round(infoD ?? 0, 2)}`, kdjArea.x, kdjArea.y - 12, "#97a0af", 14);
+  drawText(`MACD DIF ${round(infoDif ?? 0, 2)} DEA ${round(infoDea ?? 0, 2)} HIST ${round(infoHist ?? 0, 2)}`, macdArea.x, macdArea.y - 12, "#97a0af", 14);
+  drawText(`成交量 ${formatCompactVolume(infoVolume)}`, volumeArea.x, volumeArea.y - 12, "#97a0af", 14);
+  if (hoverCandleX != null && hoveredCandle) {
     const lineLeft = priceArea.x;
     const lineRight = xAxisArea.x + xAxisArea.w;
-    const lineX = clamp(state.chartView.hoverX, lineLeft, lineRight);
+    const lineX = clamp(hoverCandleX, lineLeft, lineRight);
     ctx.strokeStyle = "rgba(255,255,255,0.9)";
     ctx.lineWidth = 1;
+    ctx.setLineDash([7, 7]);
     ctx.beginPath();
     ctx.moveTo(lineX, priceArea.y);
     ctx.lineTo(lineX, volumeArea.y + volumeArea.h);
     ctx.stroke();
+    ctx.setLineDash([]);
+
+    const closeY = mapPriceY(hoveredCandle.close);
+    ctx.strokeStyle = "rgba(255,255,255,0.55)";
+    ctx.setLineDash([6, 6]);
+    ctx.beginPath();
+    ctx.moveTo(priceArea.x, closeY);
+    ctx.lineTo(priceScaleArea.x + priceScaleArea.w, closeY);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    const priceTag = (round(hoveredCandle.close, 2) ?? hoveredCandle.close).toFixed(2);
+    drawRoundRect(priceScaleArea.x + 4, closeY - 12, priceScaleArea.w - 8, 24, 10, "rgba(101, 112, 145, 0.95)", null);
+    drawText(priceTag, priceScaleArea.x + priceScaleArea.w / 2, closeY + 5, "#f3f6ff", 12, "center");
+
+    const xTagText = formatDate(hoveredCandle.date);
+    const tagW = 94;
+    const tagX = clamp(lineX - tagW / 2, xAxisArea.x + 4, xAxisArea.x + xAxisArea.w - tagW - 4);
+    drawRoundRect(tagX, xAxisArea.y + 6, tagW, 24, 10, "rgba(95,108,160,0.92)", null);
+    drawText(xTagText, tagX + tagW / 2, xAxisArea.y + 22, "#f3f6ff", 12, "center");
   }
   const leftDate = formatDate(visible[0].date);
   const midDate = formatDate(visible[Math.floor((visible.length - 1) / 2)].date);
@@ -848,12 +896,14 @@ function detectChartZone(point) {
   if (inBox(layout.priceArea)) return "priceArea";
   if (inBox(layout.xAxisArea)) return "xAxis";
   if (inBox(layout.priceScaleArea)) return "priceScale";
+  if (inBox(layout.cciArea) || inBox(layout.kdjArea) || inBox(layout.macdArea) || inBox(layout.volumeArea)) return "indicatorArea";
   return "";
 }
 function updateHoverCrosshair(point) {
   const layout = state.chartLayout;
   if (!layout) {
     state.chartView.hoverX = null;
+    state.chartView.hoverIndex = null;
     return;
   }
   const left = layout.priceArea.x;
@@ -864,6 +914,7 @@ function updateHoverCrosshair(point) {
     state.chartView.hoverX = point.x;
   } else {
     state.chartView.hoverX = null;
+    state.chartView.hoverIndex = null;
   }
 }
 canvas.addEventListener("wheel", (event) => {
@@ -905,7 +956,7 @@ canvas.addEventListener("pointermove", (event) => {
   const zone = detectChartZone(point);
   state.chartView.hoverZone = zone;
   updateHoverCrosshair(point);
-  canvas.style.cursor = zone === "xAxis" ? "ew-resize" : zone === "priceScale" ? "ns-resize" : zone === "priceArea" ? "grab" : "default";
+  canvas.style.cursor = zone === "xAxis" ? "ew-resize" : zone === "priceScale" ? "ns-resize" : zone === "priceArea" ? "grab" : zone === "indicatorArea" ? "crosshair" : "default";
   renderAll();
 });
 canvas.addEventListener("pointerleave", () => { if (!state.dragState) { state.chartView.hoverZone = ""; state.chartView.hoverX = null; canvas.style.cursor = "default"; renderAll(); } });
