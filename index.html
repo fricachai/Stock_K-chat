@@ -61,12 +61,13 @@
               <span class="author-spark spark-1"></span>
               <span class="author-spark spark-2"></span>
               <span class="author-spark spark-3"></span>
-              <span class="author-copy">程式設計者：fricachai (2026/04/15版)</span>
+              <span class="author-copy">程式設計：fricachai | 資訊提供：jimmy (2026/04/20)</span>
             </div>
           </div>
           <p id="closeInfo" class="close-info">今日收盤價：--</p>
         </div>
         <div class="header-actions">
+          <button id="logoutButton" type="button" class="ghost-button">登出</button>
           <select id="timeframeSelect" class="ghost-select">
             <option value="1h">1小時</option>
             <option value="2h">2小時</option>
@@ -78,15 +79,11 @@
             匯入 K 線 CSV
             <input id="priceFileInput" type="file" accept=".csv" hidden />
           </label>
-          <button id="logoutButton" type="button" class="ghost-button">登出</button>
         </div>
       </header>
 
       <section class="chart-stage">
         <canvas id="chartCanvas" width="1320" height="1080"></canvas>
-        <div class="chart-help">
-          <span>CSV 欄位格式：`code,name,date,open,high,low,close,volume`</span>
-        </div>
       </section>
     </main>
 

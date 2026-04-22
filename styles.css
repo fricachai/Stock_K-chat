@@ -234,8 +234,9 @@ p {
 }
 
 h1 {
-  font-size: 30px;
+  font-size: 34px;
   font-weight: 700;
+  letter-spacing: 0.01em;
 }
 
 .author-card {
@@ -445,8 +446,9 @@ h1 {
 .close-info {
   margin-top: 8px;
   color: #d7dee9;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 600;
+  line-height: 1.5;
 }
 
 h2 {
@@ -462,6 +464,7 @@ h3 {
 .header-actions {
   display: flex;
   gap: 10px;
+  align-items: center;
 }
 
 .ghost-button,
@@ -503,11 +506,11 @@ h3 {
 
 .chart-stage {
   position: relative;
-  padding: 10px;
+  padding: 12px;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.015));
   border: 1px solid var(--line);
   border-radius: 24px;
-  min-height: 1070px;
+  min-height: 1088px;
 }
 
 #chartCanvas {
@@ -518,12 +521,6 @@ h3 {
   background: #0b0c10;
   touch-action: none;
   user-select: none;
-}
-
-.chart-help {
-  margin-top: 10px;
-  color: var(--muted);
-  font-size: 13px;
 }
 
 .watchlist-panel {

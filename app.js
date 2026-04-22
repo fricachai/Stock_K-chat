@@ -351,6 +351,10 @@ function renderChart(stock) {
   const computed = computeIndicator(candles);
   const macd = computeMacd(candles);
   const kdj = computeKdj(candles);
+  const closes = candles.map((candle) => candle.close);
+  const sma5 = sma(closes, 5);
+  const sma20 = sma(closes, 20);
+  const sma60 = sma(closes, 60);
   const lastCandle = candles[candles.length - 1];
   const lastCci = computed.cciVal[candles.length - 1];
   const lastCciMa = computed.cciMa[candles.length - 1];
@@ -362,23 +366,19 @@ function renderChart(stock) {
   const prevClose = candles[candles.length - 2]?.close ?? lastCandle.close;
   const changeValue = lastCandle.close - prevClose;
   const changePct = prevClose === 0 ? 0 : ((lastCandle.close / prevClose) - 1) * 100;
-  const trendLabel = isGreenTrend ? "多頭" : "空頭";
+  const holdingState = computed.buySignals.length > computed.sellSignals.length ? "持有中" : "未持倉";
   const cciLabel = isUnderMa ? "藍在下" : "藍在上";
-  const priceArea = { x: 42, y: 72, w: 890, h: 350 };
-  const xAxisArea = { x: 42, y: 430, w: 890, h: 38 };
-  const priceScaleArea = { x: 932, y: 72, w: 78, h: 350 };
-  const cciArea = { x: 42, y: 492, w: 968, h: 108 };
-  const kdjArea = { x: 42, y: 624, w: 968, h: 108 };
-  const macdArea = { x: 42, y: 756, w: 968, h: 108 };
-  const volumeArea = { x: 42, y: 888, w: 968, h: 110 };
-  const infoArea = { x: 1040, y: 90, w: 250, h: 270 };
+  const cumulativePnl = computed.sellSignals.reduce((sum, signal) => sum + (Number.isFinite(signal.pnl) ? signal.pnl : 0), 0);
+  const priceArea = { x: 46, y: 46, w: 1168, h: 392 };
+  const xAxisArea = { x: 46, y: 446, w: 1168, h: 38 };
+  const priceScaleArea = { x: 1214, y: 46, w: 64, h: 392 };
+  const cciArea = { x: 46, y: 518, w: 1232, h: 104 };
+  const kdjArea = { x: 46, y: 648, w: 1232, h: 104 };
+  const macdArea = { x: 46, y: 778, w: 1232, h: 104 };
+  const volumeArea = { x: 46, y: 908, w: 1232, h: 100 };
   state.chartLayout = { priceArea, xAxisArea, priceScaleArea, cciArea, kdjArea, macdArea, volumeArea };
   drawRoundRect(xAxisArea.x, xAxisArea.y, xAxisArea.w, xAxisArea.h, 8, state.chartView.hoverZone === "xAxis" ? "rgba(247,200,67,0.08)" : "rgba(255,255,255,0.03)", state.chartView.hoverZone === "xAxis" ? "rgba(247,200,67,0.4)" : null);
   drawRoundRect(priceScaleArea.x, priceScaleArea.y, priceScaleArea.w, priceScaleArea.h, 8, state.chartView.hoverZone === "priceScale" ? "rgba(41,105,255,0.08)" : "rgba(255,255,255,0.03)", state.chartView.hoverZone === "priceScale" ? "rgba(41,105,255,0.45)" : null);
-  drawText(`${stock.name} · ${timeframeLabels[effectiveTimeframe]} · TWSE`, 42, 42, "#f5f6fa", 24);
-  drawText(`${stock.code}`, 360, 42, "#f7c843", 20);
-  drawText(`${round(changeValue, 2)} (${round(changePct, 2)}%)`, 460, 42, changeValue >= 0 ? "#15d18d" : "#ff5263", 18);
-  drawText(`收盤:${round(lastCandle.close, 2)} | 漲跌:${round(changeValue, 2)} (${round(changePct, 2)}%) | 波段:${trendLabel} | CCI:${cciLabel} | 浮動:${livePnl == null ? "未持倉" : `${round(livePnl, 2)}%`}`, 42, 66, "#d7dee9", 14);
   drawRoundRect(cciArea.x, cciArea.y - 6, cciArea.w, cciArea.h + 12, 10, "rgba(255,255,255,0.015)", null);
   drawRoundRect(kdjArea.x, kdjArea.y - 6, kdjArea.w, kdjArea.h + 12, 10, "rgba(255,255,255,0.015)", null);
   drawRoundRect(macdArea.x, macdArea.y - 6, macdArea.w, macdArea.h + 12, 10, "rgba(255,255,255,0.015)", null);
@@ -400,9 +400,24 @@ function renderChart(stock) {
   const visibleK = kdj.k.slice(startIndex, endIndex);
   const visibleD = kdj.d.slice(startIndex, endIndex);
   const visibleJ = kdj.j.slice(startIndex, endIndex);
+  const visibleSma5 = sma5.slice(startIndex, endIndex);
+  const visibleSma20 = sma20.slice(startIndex, endIndex);
+  const visibleSma60 = sma60.slice(startIndex, endIndex);
   const visibleVolume = visible.map((c) => c.volume ?? 0);
-  const rawMinPrice = Math.min(...visible.map((c) => c.low), ...visibleSt.filter((v) => v != null));
-  const rawMaxPrice = Math.max(...visible.map((c) => c.high), ...visibleSt.filter((v) => v != null));
+  const rawMinPrice = Math.min(
+    ...visible.map((c) => c.low),
+    ...visibleSt.filter((v) => v != null),
+    ...visibleSma5.filter((v) => v != null),
+    ...visibleSma20.filter((v) => v != null),
+    ...visibleSma60.filter((v) => v != null),
+  );
+  const rawMaxPrice = Math.max(
+    ...visible.map((c) => c.high),
+    ...visibleSt.filter((v) => v != null),
+    ...visibleSma5.filter((v) => v != null),
+    ...visibleSma20.filter((v) => v != null),
+    ...visibleSma60.filter((v) => v != null),
+  );
   const rawMidBase = (rawMinPrice + rawMaxPrice) / 2;
   const rawHalfRange = Math.max((rawMaxPrice - rawMinPrice) / 2, rawMidBase * 0.01);
   const scaledHalfRange = rawHalfRange * state.chartView.priceScale;
@@ -432,6 +447,24 @@ function renderChart(stock) {
   ctx.beginPath();
   ctx.rect(priceArea.x, priceArea.y, priceArea.w, priceArea.h);
   ctx.clip();
+
+  [
+    { series: visibleSma5, color: "#2fb6ff", width: 2.4 },
+    { series: visibleSma20, color: "#f7c843", width: 2.4 },
+    { series: visibleSma60, color: "#ff6278", width: 2.4 },
+  ].forEach(({ series, color, width }) => {
+    series.forEach((value, i) => {
+      if (value == null || i === 0 || series[i - 1] == null) return;
+      const prevX = priceArea.x + (i - 1) * candleWidth + candleWidth / 2 + panX;
+      const x = priceArea.x + i * candleWidth + candleWidth / 2 + panX;
+      ctx.strokeStyle = color;
+      ctx.lineWidth = width;
+      ctx.beginPath();
+      ctx.moveTo(prevX, mapPriceY(series[i - 1]));
+      ctx.lineTo(x, mapPriceY(value));
+      ctx.stroke();
+    });
+  });
 
   visible.forEach((candle, i) => {
     const x = priceArea.x + i * candleWidth + candleWidth / 2 + panX;
@@ -490,6 +523,9 @@ function renderChart(stock) {
     callout.lines.forEach((line, idx) => drawText(line, callout.boxX + callout.boxW / 2, callout.boxY + 18 + idx * 16, callout.fg, 12, "center"));
   });
   ctx.restore();
+  drawText("SMA5", priceArea.x + 10, priceArea.y + 18, "#62c8ff", 12);
+  drawText("SMA20", priceArea.x + 76, priceArea.y + 18, "#f7c843", 12);
+  drawText("SMA60", priceArea.x + 154, priceArea.y + 18, "#ff7b8a", 12);
 
   const cciMin = Math.min(-100, ...visibleCci.filter((v) => v != null), ...visibleCciMa.filter((v) => v != null));
   const cciMax = Math.max(100, ...visibleCci.filter((v) => v != null), ...visibleCciMa.filter((v) => v != null));
@@ -612,33 +648,17 @@ function renderChart(stock) {
     ctx.lineTo(lineX, volumeArea.y + volumeArea.h);
     ctx.stroke();
   }
-  drawRoundRect(infoArea.x, infoArea.y, infoArea.w, infoArea.h, 14, "rgba(19,22,30,0.95)", "#2a3040");
-  const rows = [
-    ["CCI 狀態", isUnderMa ? "藍在下" : "藍在上", isUnderMa ? "#ff5263" : "#15d18d", isUnderMa ? "#ffffff" : "#111317"],
-    ["最新收盤價", round(lastCandle.close, 2), "#111317", "#f7c843"],
-    ["當前浮動獲利", livePnl == null ? "未持倉" : `${round(livePnl, 2)}%`, "#111317", livePnl == null ? "#97a0af" : livePnl >= 0 ? "#15d18d" : "#ff5263"],
-    ["當下幅度", `${round(liveKChange, 2)}%`, "#111317", liveKChange >= 0 ? "#15d18d" : "#ff5263"],
-    ["當前波段", isGreenTrend ? "多頭" : "空頭", "#111317", isGreenTrend ? "#15d18d" : "#ff5263"],
-  ];
-  rows.forEach((row, i) => {
-    const top = infoArea.y + 14 + i * 36;
-    drawText(row[0], infoArea.x + 16, top + 16, "#c7cfdb", 13);
-    drawRoundRect(infoArea.x + 118, top, 116, 26, 6, row[2], null);
-    drawText(String(row[1]), infoArea.x + 176, top + 17, row[3], 13, "center");
-  });
   const leftDate = formatDate(visible[0].date);
   const midDate = formatDate(visible[Math.floor((visible.length - 1) / 2)].date);
   const rightDate = formatDate(visible[visible.length - 1].date);
   drawText(leftDate, xAxisArea.x + 4, xAxisArea.y + 24, "#97a0af", 12);
   drawText(midDate, xAxisArea.x + xAxisArea.w / 2, xAxisArea.y + 24, "#97a0af", 12, "center");
   drawText(rightDate, xAxisArea.x + xAxisArea.w - 4, xAxisArea.y + 24, "#97a0af", 12, "right");
-  drawText("時間軸: 滾輪縮放", xAxisArea.x + 10, xAxisArea.y + 12, state.chartView.hoverZone === "xAxis" ? "#ffe27a" : "rgba(151,160,175,0.85)", 11);
-  drawText("價格軸: 滾輪縮放", priceScaleArea.x + priceScaleArea.w - 6, priceScaleArea.y + priceScaleArea.h + 16, state.chartView.hoverZone === "priceScale" ? "#7ab5ff" : "rgba(151,160,175,0.85)", 11, "right");
   return {
     effectiveTimeframe,
     fallback,
     lastClose: lastCandle.close,
-    summaryLine: `收盤:${round(lastCandle.close, 2)} | 漲跌:${round(changeValue, 2)} (${round(changePct, 2)}%) | 波段:${trendLabel} | CCI:${cciLabel} | 浮動:${livePnl == null ? "未持倉" : `${round(livePnl, 2)}%`}`,
+    summaryLine: `收盤價：${round(lastCandle.close, 2)} | ${round(changeValue, 2)} (${round(changePct, 2)}%) | 買點：藍線下往上穿黃線 | 賣點：藍線上往下穿黃線 | ${holdingState} | 累計損益 ${round(cumulativePnl, 2)}% | CCI：${cciLabel}`,
   };
 }
 function renderWatchlist() {
