@@ -219,6 +219,12 @@ body.auth-locked {
   margin-bottom: 14px;
 }
 
+.watchlist-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
 h1,
 h2,
 h3,

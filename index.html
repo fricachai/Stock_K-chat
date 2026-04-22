@@ -98,10 +98,13 @@
           <p class="eyebrow">右側觀察清單</p>
           <h2>股票代號 / 名稱</h2>
         </div>
-        <label class="icon-button file-button">
-          匯入
-          <input id="watchlistFileInput" type="file" accept=".csv" hidden />
-        </label>
+        <div class="watchlist-actions">
+          <button id="saveWatchlistButton" type="button" class="icon-button">儲存</button>
+          <label class="icon-button file-button">
+            匯入
+            <input id="watchlistFileInput" type="file" accept=".csv" hidden />
+          </label>
+        </div>
       </div>
 
       <form id="stockForm" class="stock-form">

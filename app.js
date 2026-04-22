@@ -17,6 +17,7 @@ const nameInput = document.getElementById("nameInput");
 const searchInput = document.getElementById("searchInput");
 const statusText = document.getElementById("statusText");
 const watchlistFileInput = document.getElementById("watchlistFileInput");
+const saveWatchlistButton = document.getElementById("saveWatchlistButton");
 const priceFileInput = document.getElementById("priceFileInput");
 const timeframeSelect = document.getElementById("timeframeSelect");
 const authorCard = document.querySelector(".author-card");
@@ -37,6 +38,7 @@ const AUTH_CONFIG = {
 };
 
 const AUTH_STORAGE_KEY = "stock-k-chat-auth";
+const WATCHLIST_STORAGE_KEY = "stock-k-chat-watchlist";
 
 const timeframeHours = { "1h": 1, "2h": 2, "3h": 3, "4h": 4, "1d": 24 };
 const timeframeLabels = { "1h": "1小時", "2h": "2小時", "3h": "3小時", "4h": "4小時", "1d": "1日" };
@@ -80,6 +82,27 @@ function setGateLocked(locked) {
 function setLoginStatus(message, type = "") {
   loginStatus.textContent = message;
   loginStatus.className = `login-status${type ? ` ${type}` : ""}`;
+}
+function saveWatchlistState() {
+  const payload = {
+    stocks: state.stocks.map((stock) => ({ code: stock.code, name: stock.name })),
+    selectedCode: state.selectedCode,
+  };
+  window.localStorage.setItem(WATCHLIST_STORAGE_KEY, JSON.stringify(payload));
+}
+function loadWatchlistState() {
+  try {
+    const raw = window.localStorage.getItem(WATCHLIST_STORAGE_KEY);
+    if (!raw) return false;
+    const payload = JSON.parse(raw);
+    const stocks = Array.isArray(payload?.stocks) ? payload.stocks.filter((stock) => stock?.code).map((stock) => ({ code: String(stock.code), name: String(stock.name || stock.code) })) : [];
+    if (!stocks.length) return false;
+    state.stocks = stocks;
+    state.selectedCode = stocks.some((stock) => stock.code === payload?.selectedCode) ? payload.selectedCode : stocks[0].code;
+    return true;
+  } catch {
+    return false;
+  }
 }
 function getDefaultVisibleCount(timeframe, candleCount = 0) {
   if (timeframe === "1d") return clamp(candleCount || 240, 20, 260);
@@ -809,6 +832,7 @@ function renderWatchlist() {
       if (state.selectedCode === stock.code) {
         state.selectedCode = state.stocks[0]?.code ?? null;
       }
+      saveWatchlistState();
       renderAll();
     });
     watchlistEl.appendChild(item);
@@ -832,6 +856,7 @@ function upsertStock(stock) {
   const existing = state.stocks.find((entry) => entry.code === stock.code);
   if (existing) existing.name = stock.name; else state.stocks.push(stock);
   if (!state.selectedCode) state.selectedCode = stock.code;
+  saveWatchlistState();
 }
 function parseCsv(text) {
   const lines = text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
@@ -1135,15 +1160,23 @@ priceFileInput.addEventListener("change", (event) => {
   readFile(file, (text) => { loadPriceRows(parseCsv(text)); setStatus("已匯入本地 K 線 CSV。", "success"); }); event.target.value = "";
 });
 window.addEventListener("resize", () => renderAll());
+saveWatchlistButton.addEventListener("click", () => {
+  saveWatchlistState();
+  setStatus("已儲存目前商品名單。", "success");
+});
 async function bootstrap() {
   if (bootstrap.started) return;
   bootstrap.started = true;
   initAuthorCardEffects();
-  upsertStock({ code: "2330", name: "台積電" });
-  state.selectedCode = "2330";
+  if (!loadWatchlistState()) {
+    upsertStock({ code: "2330", name: "台積電" });
+    state.selectedCode = "2330";
+  }
   renderAll();
-  const ok = await ensureStockData("2330", "");
-  if (!ok) loadDemoData();
+  const targetCode = state.selectedCode || state.stocks[0]?.code || "2330";
+  const targetStock = state.stocks.find((stock) => stock.code === targetCode);
+  const ok = await ensureStockData(targetCode, targetStock?.name || "");
+  if (!ok && state.stocks.length === 1 && targetCode === "2330") loadDemoData();
 }
 bootstrap.started = false;
 
