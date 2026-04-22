@@ -317,6 +317,44 @@ h1 {
   z-index: 2;
 }
 
+.author-link {
+  position: relative;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 42px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.04));
+  color: #fff2a3;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-decoration: none;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 0 12px rgba(255, 210, 116, 0.16);
+  transition:
+    transform 160ms ease,
+    border-color 200ms ease,
+    box-shadow 200ms ease,
+    color 200ms ease,
+    background 200ms ease;
+}
+
+.author-link:hover {
+  transform: translateY(-1px);
+  color: #fff7cf;
+  border-color: rgba(255, 224, 133, 0.36);
+  background: linear-gradient(180deg, rgba(255, 219, 116, 0.18), rgba(255, 173, 73, 0.08));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 0 14px rgba(255, 206, 120, 0.24),
+    0 0 24px rgba(255, 176, 90, 0.16);
+}
+
 .author-ring {
   position: absolute;
   inset: -1px;
