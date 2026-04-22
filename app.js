@@ -44,7 +44,7 @@ const state = {
   rawCandlesByCode: new Map(),
   selectedCode: null,
   loadingCodes: new Set(),
-  chartView: { visibleCount: 36, priceScale: 1, hoverZone: "", hoverX: null, hoverIndex: null, barOffset: 0, panX: 0, panY: 0 },
+  chartView: { visibleCount: 36, priceScale: 1, hoverZone: "", hoverX: null, hoverY: null, hoverIndex: null, barOffset: 0, panX: 0, panY: 0 },
   chartLayout: null,
   timeframe: "1d",
   dragState: null,
@@ -574,6 +574,14 @@ function renderChart(stock) {
       adjustedY = Math.max(adjustedY, priceArea.y + 10);
     }
     callout.boxY = adjustedY;
+    if (
+      callout.boxY < priceArea.y + 2 ||
+      callout.boxY + callout.boxH > priceArea.y + priceArea.h - 2 ||
+      callout.targetY < priceArea.y ||
+      callout.targetY > priceArea.y + priceArea.h
+    ) {
+      return;
+    }
     occupiedBoxes.push({ x: callout.boxX, y: callout.boxY, w: callout.boxW, h: callout.boxH });
 
     const anchorX = clamp(callout.targetX, callout.boxX + 18, callout.boxX + callout.boxW - 18);
@@ -719,6 +727,13 @@ function renderChart(stock) {
   drawText(`KD K ${round(infoK ?? 0, 2)} D ${round(infoD ?? 0, 2)}`, kdjArea.x, kdjArea.y - 12, "#97a0af", 14);
   drawText(`MACD DIF ${round(infoDif ?? 0, 2)} DEA ${round(infoDea ?? 0, 2)} HIST ${round(infoHist ?? 0, 2)}`, macdArea.x, macdArea.y - 12, "#97a0af", 14);
   drawText(`成交量 ${formatCompactVolume(infoVolume)}`, volumeArea.x, volumeArea.y - 12, "#97a0af", 14);
+  const hoverY = state.chartView.hoverY;
+  const showPanelHoverTag = (zone, area, min, max, formatter = (value) => `${round(value ?? 0, 2)}`) => {
+    if (state.chartView.hoverZone !== zone || hoverY == null) return;
+    const y = clamp(hoverY, area.y, area.y + area.h);
+    const value = max - ((y - area.y) / (area.h || 1)) * (max - min);
+    drawValueTag(area.x + area.w - 72, y, formatter(value), "rgba(101, 112, 145, 0.95)", "#f3f6ff", 68);
+  };
   if (hoverCandleX != null && hoveredCandle) {
     const lineLeft = priceArea.x;
     const lineRight = xAxisArea.x + xAxisArea.w;
@@ -747,15 +762,11 @@ function renderChart(stock) {
     const xTagText = formatDate(hoveredCandle.date);
     const tagX = clamp(lineX - 52, xAxisArea.x + 4, xAxisArea.x + xAxisArea.w - 108);
     drawValueTag(tagX, xAxisArea.y + 18, xTagText, "rgba(95,108,160,0.92)", "#f3f6ff", 104);
-
-    drawValueTag(cciArea.x + cciArea.w - 58, mapCciY(infoCci ?? 0), `${round(infoCci ?? 0, 2)}`, "rgba(45,115,255,0.96)");
-    drawValueTag(cciArea.x + cciArea.w - 126, mapCciY(infoCciMa ?? 0), `${round(infoCciMa ?? 0, 2)}`, "rgba(247,200,67,0.96)", "#111317");
-    drawValueTag(kdjArea.x + kdjArea.w - 58, mapKdjY(infoK ?? 0), `${round(infoK ?? 0, 2)}`, "rgba(54,180,255,0.96)");
-    drawValueTag(kdjArea.x + kdjArea.w - 126, mapKdjY(infoD ?? 0), `${round(infoD ?? 0, 2)}`, "rgba(247,200,67,0.96)", "#111317");
-    drawValueTag(macdArea.x + macdArea.w - 58, mapMacdY(infoDif ?? 0), `${round(infoDif ?? 0, 2)}`, "rgba(45,115,255,0.96)");
-    drawValueTag(macdArea.x + macdArea.w - 126, mapMacdY(infoDea ?? 0), `${round(infoDea ?? 0, 2)}`, "rgba(255,159,26,0.96)", "#111317");
-    drawValueTag(volumeArea.x + volumeArea.w - 82, mapVolumeY(infoVolume), formatCompactVolume(infoVolume), "rgba(115,125,160,0.96)", "#f3f6ff", 78);
   }
+  showPanelHoverTag("cciArea", cciArea, cciMin, cciMax);
+  showPanelHoverTag("kdjArea", kdjArea, kdjMin, kdjMax);
+  showPanelHoverTag("macdArea", macdArea, macdMin, macdMax);
+  showPanelHoverTag("volumeArea", volumeArea, 0, volumeMax, formatCompactVolume);
   const axisIndices = getAxisLabelIndices(visible);
   axisIndices.forEach((idx) => {
     const candle = visible[idx];
@@ -964,13 +975,17 @@ function detectChartZone(point) {
   if (inBox(layout.priceArea)) return "priceArea";
   if (inBox(layout.xAxisArea)) return "xAxis";
   if (inBox(layout.priceScaleArea)) return "priceScale";
-  if (inBox(layout.cciArea) || inBox(layout.kdjArea) || inBox(layout.macdArea) || inBox(layout.volumeArea)) return "indicatorArea";
+  if (inBox(layout.cciArea)) return "cciArea";
+  if (inBox(layout.kdjArea)) return "kdjArea";
+  if (inBox(layout.macdArea)) return "macdArea";
+  if (inBox(layout.volumeArea)) return "volumeArea";
   return "";
 }
 function updateHoverCrosshair(point) {
   const layout = state.chartLayout;
   if (!layout) {
     state.chartView.hoverX = null;
+    state.chartView.hoverY = null;
     state.chartView.hoverIndex = null;
     return;
   }
@@ -980,8 +995,10 @@ function updateHoverCrosshair(point) {
   const bottom = layout.volumeArea.y + layout.volumeArea.h;
   if (point.x >= left && point.x <= right && point.y >= top && point.y <= bottom) {
     state.chartView.hoverX = point.x;
+    state.chartView.hoverY = point.y;
   } else {
     state.chartView.hoverX = null;
+    state.chartView.hoverY = null;
     state.chartView.hoverIndex = null;
   }
 }
@@ -1024,7 +1041,12 @@ canvas.addEventListener("pointermove", (event) => {
   const zone = detectChartZone(point);
   state.chartView.hoverZone = zone;
   updateHoverCrosshair(point);
-  canvas.style.cursor = zone === "xAxis" ? "ew-resize" : zone === "priceScale" ? "ns-resize" : zone === "priceArea" ? "grab" : zone === "indicatorArea" ? "crosshair" : "default";
+  canvas.style.cursor =
+    zone === "xAxis" ? "ew-resize" :
+    zone === "priceScale" ? "ns-resize" :
+    zone === "priceArea" ? "grab" :
+    zone === "cciArea" || zone === "kdjArea" || zone === "macdArea" || zone === "volumeArea" ? "crosshair" :
+    "default";
   renderAll();
 });
 canvas.addEventListener("pointerleave", () => { if (!state.dragState) { state.chartView.hoverZone = ""; state.chartView.hoverX = null; canvas.style.cursor = "default"; renderAll(); } });
