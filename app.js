@@ -52,6 +52,7 @@ const state = {
   chartLayout: null,
   timeframe: "1d",
   dragState: null,
+  watchlistDragCode: null,
 };
 
 function setStatus(message, type = "") {
@@ -103,6 +104,18 @@ function loadWatchlistState() {
   } catch {
     return false;
   }
+}
+function moveStockBefore(dragCode, targetCode) {
+  if (!dragCode || !targetCode || dragCode === targetCode) return;
+  const fromIndex = state.stocks.findIndex((stock) => stock.code === dragCode);
+  const toIndex = state.stocks.findIndex((stock) => stock.code === targetCode);
+  if (fromIndex < 0 || toIndex < 0 || fromIndex === toIndex) return;
+  const next = [...state.stocks];
+  const [moved] = next.splice(fromIndex, 1);
+  const insertIndex = next.findIndex((stock) => stock.code === targetCode);
+  next.splice(insertIndex, 0, moved);
+  state.stocks = next;
+  saveWatchlistState();
 }
 function getDefaultVisibleCount(timeframe, candleCount = 0) {
   if (timeframe === "1d") return clamp(candleCount || 240, 20, 260);
@@ -814,6 +827,8 @@ function renderWatchlist() {
   state.stocks.filter((stock) => !keyword || stock.code.toLowerCase().includes(keyword) || stock.name.toLowerCase().includes(keyword)).forEach((stock) => {
     const item = document.createElement("div");
     item.className = `watch-item ${stock.code === state.selectedCode ? "active" : ""}`;
+    item.draggable = true;
+    item.dataset.code = stock.code;
     item.innerHTML = `
       <button type="button" class="watch-main">
         <span class="watch-code">${stock.code}</span>
@@ -821,6 +836,31 @@ function renderWatchlist() {
       </button>
       <button type="button" class="watch-remove" aria-label="移除 ${stock.code}">×</button>
     `;
+    item.addEventListener("dragstart", (event) => {
+      state.watchlistDragCode = stock.code;
+      item.classList.add("dragging");
+      event.dataTransfer.effectAllowed = "move";
+      event.dataTransfer.setData("text/plain", stock.code);
+    });
+    item.addEventListener("dragend", () => {
+      state.watchlistDragCode = null;
+      watchlistEl.querySelectorAll(".watch-item").forEach((node) => node.classList.remove("dragging", "drop-target"));
+    });
+    item.addEventListener("dragover", (event) => {
+      if (!state.watchlistDragCode || state.watchlistDragCode === stock.code) return;
+      event.preventDefault();
+      event.dataTransfer.dropEffect = "move";
+      watchlistEl.querySelectorAll(".watch-item").forEach((node) => node.classList.toggle("drop-target", node === item));
+    });
+    item.addEventListener("dragleave", () => {
+      item.classList.remove("drop-target");
+    });
+    item.addEventListener("drop", (event) => {
+      event.preventDefault();
+      item.classList.remove("drop-target");
+      moveStockBefore(state.watchlistDragCode, stock.code);
+      renderWatchlist();
+    });
     item.querySelector(".watch-main").addEventListener("click", async () => {
       state.selectedCode = stock.code; resetChartView(stock.code); renderAll();
       if (!state.rawCandlesByCode.has(stock.code)) await ensureStockData(stock.code, stock.name);

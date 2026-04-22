@@ -659,6 +659,15 @@ input::placeholder {
   filter: brightness(1.03);
 }
 
+.watch-item.dragging {
+  opacity: 0.42;
+}
+
+.watch-item.drop-target {
+  outline: 2px dashed rgba(255, 226, 122, 0.72);
+  outline-offset: -2px;
+}
+
 .watch-code {
   font-weight: 700;
 }
