@@ -603,40 +603,71 @@ input::placeholder {
 
 .watch-item {
   display: grid;
-  grid-template-columns: 110px 1fr;
-  gap: 10px;
-  padding: 13px 12px;
+  grid-template-columns: minmax(0, 1fr) 42px;
+  align-items: stretch;
   border-bottom: 1px solid var(--line-soft);
-  cursor: pointer;
-  transition: background 0.2s ease, transform 0.2s ease;
-  background: rgba(255, 255, 255, 0.92);
-  color: #111317;
-}
-
-.watch-item:hover {
-  background: rgba(255, 255, 255, 1);
-}
-
-.watch-item.active {
   background: linear-gradient(90deg, rgba(247, 200, 67, 0.18), rgba(255, 255, 255, 0.06));
   box-shadow: inset 4px 0 0 var(--yellow);
   color: #ffffff;
 }
 
-.watch-item.active .watch-code {
+.watch-main,
+.watch-remove {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.watch-main {
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  gap: 10px;
+  padding: 13px 12px;
+  text-align: left;
+}
+
+.watch-item .watch-code {
   color: #ffe27a;
 }
 
-.watch-item.active .watch-name {
+.watch-item .watch-name {
   color: #ffffff;
+}
+
+.watch-item.active {
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: none;
+  color: #111317;
+}
+
+.watch-item.active .watch-code {
+  color: #111317;
+}
+
+.watch-item.active .watch-name {
+  color: #111317;
+}
+
+.watch-item:hover {
+  filter: brightness(1.03);
 }
 
 .watch-code {
   font-weight: 700;
 }
 
-.watch-name {
-  color: #111317;
+.watch-remove {
+  font-size: 22px;
+  line-height: 1;
+  color: inherit;
+  opacity: 0.72;
+  transition: opacity 0.2s ease, background 0.2s ease;
+}
+
+.watch-remove:hover {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .import-note {

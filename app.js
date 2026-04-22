@@ -787,13 +787,27 @@ function renderWatchlist() {
   const keyword = searchInput.value.trim().toLowerCase();
   watchlistEl.innerHTML = "";
   state.stocks.filter((stock) => !keyword || stock.code.toLowerCase().includes(keyword) || stock.name.toLowerCase().includes(keyword)).forEach((stock) => {
-    const item = document.createElement("button");
-    item.type = "button";
+    const item = document.createElement("div");
     item.className = `watch-item ${stock.code === state.selectedCode ? "active" : ""}`;
-    item.innerHTML = `<span class="watch-code">${stock.code}</span><span class="watch-name">${stock.name}</span>`;
-    item.addEventListener("click", async () => {
+    item.innerHTML = `
+      <button type="button" class="watch-main">
+        <span class="watch-code">${stock.code}</span>
+        <span class="watch-name">${stock.name}</span>
+      </button>
+      <button type="button" class="watch-remove" aria-label="移除 ${stock.code}">×</button>
+    `;
+    item.querySelector(".watch-main").addEventListener("click", async () => {
       state.selectedCode = stock.code; resetChartView(stock.code); renderAll();
       if (!state.rawCandlesByCode.has(stock.code)) await ensureStockData(stock.code, stock.name);
+    });
+    item.querySelector(".watch-remove").addEventListener("click", (event) => {
+      event.stopPropagation();
+      state.stocks = state.stocks.filter((entry) => entry.code !== stock.code);
+      state.rawCandlesByCode.delete(stock.code);
+      if (state.selectedCode === stock.code) {
+        state.selectedCode = state.stocks[0]?.code ?? null;
+      }
+      renderAll();
     });
     watchlistEl.appendChild(item);
   });
